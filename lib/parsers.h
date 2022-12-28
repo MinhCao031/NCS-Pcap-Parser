@@ -17,6 +17,8 @@ typedef struct {
   // protocol
   // uint16_t protocol;
 
+  struct ether_header ethernet;
+
   struct ip ip_header;
   
   union {
@@ -26,9 +28,11 @@ typedef struct {
 
   parsed_payload payload;
 
+  uint pkt_size;
+
 } parsed_packet;
 
-parsed_packet pkt_parser(package packet, package segment, package payload);
+parsed_packet pkt_parser(package frame, package packet, package segment, package payload);
 
 void tcp_parser(parsed_packet *pkt, package segment, package payload);
 void udp_parser(parsed_packet *pkt, package segment, package payload);

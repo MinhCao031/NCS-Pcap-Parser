@@ -1,7 +1,8 @@
 #include "lib/handler.h"
 #include "lib/log.h"
 
-void get_packets(pcap_t *handler, FILE* stream_parser, FILE* stream_flow, FILE* stream_err);
+void get_packets(pcap_t *handler, FILE *stream_parser, FILE *stream_flow,
+                 FILE *stream_err);
 
 int main(void) {
   // error buffer
@@ -23,7 +24,8 @@ int main(void) {
   return 0;
 }
 
-void get_packets(pcap_t *handler, FILE* stream_parser, FILE* stream_flow, FILE* stream_err) {
+void get_packets(pcap_t *handler, FILE *stream_parser, FILE *stream_flow,
+                 FILE *stream_err) {
 
   // The header that pcap gives us
   struct pcap_pkthdr *header;
@@ -70,25 +72,32 @@ void get_packets(pcap_t *handler, FILE* stream_parser, FILE* stream_flow, FILE* 
     }
 
     // insert to hash table
-    parsed_packet pkt = pkt_parser(packet, segment, payload);
+    parsed_packet pkt = pkt_parser(frame, packet, segment, payload);
     insert_packet(table, pkt, stream_parser);
     LOG_DBG(stream_parser, DBG_PARSER,
-      "------------------------------------------------Successfully------------\n");
-    if (packetCount > LIMIT_PACKET) break;
+            "------------------------------------------------Successfully------"
+            "------\n");
+    if (packetCount > LIMIT_PACKET)
+      break;
     continue;
 
-    END: {
-      LOG_DBG(stream_parser, DBG_PARSER,
-        "------------------------------------------------PacketFailed------------\n");
-      if (packetCount > LIMIT_PACKET) break;
-    }
+  END : {
+    LOG_DBG(stream_parser, DBG_PARSER,
+            "------------------------------------------------PacketFailed------"
+            "------\n");
+    if (packetCount > LIMIT_PACKET)
+      break;
   }
-  
+  }
+
   print_hashtable(table, stream_flow);
-  // LOG_DBG(stream_flow, DBG_FLOW, "data length: %d\n", pop_head_payload(&search_flow(table, 3316805598312908751)->flow_up).data_len);
-  // print_flow(*search_flow(table, 94129317375700));
+  // LOG_DBG(stream_flow, DBG_FLOW, "data length: %d\n",
+  // pop_head_payload(&search_flow(table,
+  // 3316805598312908751)->flow_up).data_len); print_flow(*search_flow(table,
+  // 94129317375700));
   LOG_DBG(stream_flow, DBG_FLOW, "number of flows: %d\n", count_flows(table));
-  LOG_DBG(stream_flow, DBG_FLOW, "Number of packets: %d ~ %d\n", count_packets(table), inserted_packets++);
+  LOG_DBG(stream_flow, DBG_FLOW, "Number of packets: %d ~ %d\n",
+          count_packets(table), inserted_packets++);
 
   free_hash_table(table);
 }
