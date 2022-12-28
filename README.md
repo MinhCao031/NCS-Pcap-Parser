@@ -50,7 +50,7 @@ Với:
 - [ ] Đa luồng
 - [x] Parser
 - [x] Hashtable
-- [ ] Expect sequence
+- [x] Expect sequence
 - [x] Sắp xếp TCP packet theo thứ tự
 - [x] Phân loại gói tin theo luồng
 - [ ] Lọc bỏ các gói lỗi
