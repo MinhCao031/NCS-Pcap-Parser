@@ -6,9 +6,10 @@ Thu thập, lọc, trích xuất và lưu trữ dữ liệu mạng
 	- Biên dịch: `make com`
 	- Biên dịch và chạy: `make run`
 	- Dọn dẹp: `make clean`
-2. Main file: `test.c`
+2. Main file: `test. c`
 	- Đọc dữ liệu từ file `sample.pcap`
-	- In ra thông tin các packet trong 1 flow sử dụng hàm print_flow() và search_flow() với tham số là flow key (xem trong file `db.txt`)
+	- In ra thông tin các packet trong 1 flow sử dụng hàm print_flow() và search_flow() với tham số là flow key (xem trong file `output2.txt`)
+	- Có thể xem quá trình đọc packet trong file pcap được in ra trong file `output1.txt`
 
 ## Một vài thao tác cơ bản:
 ```C
