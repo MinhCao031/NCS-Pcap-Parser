@@ -20,7 +20,7 @@ void insert_last_node(Node **head, Node *const node);
 // insert head of list
 void insert_first_node(Node **head, Node *const node);
 // insert to waiting list
-void insert_to_wait(Node **head, Node node, FILE* fptr);
+void insert_to_wait(Node **head, Node *const node, FILE* fptr);
 
 // Search for a node with the given key
 Node *search_node(Node const *head, uint64_t key);

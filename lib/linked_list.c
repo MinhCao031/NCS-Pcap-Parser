@@ -131,12 +131,9 @@ void insert_to_wait(Node **head, Node *const node, FILE* stream) {
   else {
     node->next = new_head;
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "Inserting at the first place...\n");/**/
+    LOG_DBG(stream, DBG_PARSER, "Next waiting node at the first place...\n");/**/
     return;
   }
-  Node temp = node;
-  temp.next = *head;
-
 }
 
 // insert end of list
