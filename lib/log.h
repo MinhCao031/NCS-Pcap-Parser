@@ -20,9 +20,9 @@
 
 // 1 for fprintf, 0 for doing nothing
 #define DBG_ERROR 1
-#define DBG_PARSER 0
+#define DBG_PARSER 1
 #define DBG_FLOW 1
-#define DBG_PAYLOAD 1
+#define DBG_PAYLOAD 0
 
 // 0 to check sequence, 1 for auto true
 #define DBG_PKT_SEQ 0
