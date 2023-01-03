@@ -1,20 +1,39 @@
 #include "parsers.h"
 #include "dissection.h"
 
-parsed_packet pkt_parser(const package packet, const package segment,
-                         const package payload) {
+#define MAC_SIZE 6
+
+parsed_packet pkt_parser(const package frame, const package packet,
+                         const package segment, const package payload) {
 
   parsed_packet pkt;
 
+  pkt.pkt_size = frame.package_size ;
+
+  const struct ether_header *ethernet_header =
+      (struct ether_header *)frame.header_pointer;
+  for (int i = 0; i < MAC_SIZE; i++) {
+    pkt.ethernet.ether_dhost[i] = (ethernet_header->ether_dhost)[i];
+    pkt.ethernet.ether_shost[i] = (ethernet_header->ether_shost)[i];
+  }
+  pkt.ethernet.ether_type = ethernet_header->ether_type;
+
+  /** printf("Source MAC: %s\n", */
+  /**        ether_ntoa((struct ether_addr *)pkt.ethernet.ether_shost)); */
+  /** printf("Destination MAC: %s\n", */
+  /**        ether_ntoa((struct ether_addr *)pkt.ethernet.ether_dhost)); */
+
   const struct ip *ip_header = (struct ip *)packet.header_pointer;
 
-  pkt.ip_header = (*ip_header);
-  // pkt.src_ip = ip_header->ip_src;
-  // pkt.dst_ip = ip_header->ip_dst;
+  pkt.ip_header.ip_src = ip_header->ip_src;
+  pkt.ip_header.ip_dst = ip_header->ip_dst;
+  pkt.ip_header.ip_ttl = ip_header->ip_ttl;
+  pkt.ip_header.ip_tos = ip_header->ip_tos;
 
   /** // print IP addresses */
-  /** printf("Source IP: %s\n", inet_ntoa((*pkt).src_ip)); */
-  /** printf("Destination IP: %s\n", inet_ntoa((*pkt).dst_ip)); */
+  /** printf("Source IP: %s\n", inet_ntoa(pkt.ip_header.ip_src)); */
+  /** printf("Destination IP: %s\n", inet_ntoa(pkt.ip_header.ip_dst)); */
+  /** printf("Time to live: %d\n", pkt.ip_header.ip_ttl); */
 
   if (segment.type == IPPROTO_TCP) {
     tcp_parser(&pkt, segment, payload);
@@ -37,11 +56,12 @@ void tcp_parser(parsed_packet *pkt, package segment, package payload) {
   (*pkt).tcp.th_flags = tcp_header->th_flags;
   (*pkt).payload.data = payload.header_pointer;
   (*pkt).payload.data_len = payload.package_size;
+  (*pkt).tcp.th_win = tcp_header->th_win;
 
   /** printf("Protocol: TCP\n"); */
-  /** printf("Source port: %d\n", (*pkt).src_port); */
-  /** printf("Destination port: %d\n", (*pkt).dst_port); */
-  /** printf("Sequence number: %ld\n", (*pkt).seq); */
+  /** printf("Source port: %d\n", (*pkt).tcp.source); */
+  /** printf("Destination port: %d\n", (*pkt).tcp.dest); */
+  /** printf("Sequence number: %d\n", (*pkt).tcp.seq); */
   /** printf("Payload size: %d\n", (*pkt).payload.data_len); */
 }
 
@@ -56,7 +76,7 @@ void udp_parser(parsed_packet *pkt, package segment, package payload) {
   (*pkt).payload.data_len = payload.package_size;
 
   /** printf("Protocol: UDP\n"); */
-  /** printf("Source port: %d\n", (*pkt).src_port); */
-  /** printf("Destination port: %d\n", (*pkt).dst_port); */
+  /** printf("Source port: %d\n", (*pkt).udp.source); */
+  /** printf("Destination port: %d\n", (*pkt).udp.dest); */
   /** printf("Payload size: %d\n", (*pkt).payload.data_len); */
 }

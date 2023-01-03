@@ -1,6 +1,6 @@
 #include "hash_table.h"
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 extern const int DEBUGGING;
 
@@ -27,7 +27,7 @@ void insert_new_flow(HashTable table, Node *const flow_node) {
 
 // insert a packet data to a flow
 void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
-                    Node **flow_direction, FILE* stream) {
+                    Node **flow_direction, FILE *stream) {
   if (insert_type == DESC) {
     insert_node_desc(flow_direction, pkt_node, stream);
   }
@@ -42,7 +42,7 @@ void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
 }
 
 // search flow by key in the hash table
-flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream) {
+flow_base_t *search_flow(HashTable const table, uint64_t key, FILE *stream) {
   uint index = hash(key, table.size);
   Node *head_flow = table.lists[index];
 
@@ -51,7 +51,8 @@ flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream) {
   } else {
     LOG_DBG(stream, DBG_PARSER, "Finding node with index = %d...\n", index);
     Node *n = search_node(head_flow, key);
-    LOG_DBG(stream, DBG_PARSER, "Done searching node with index = %d...\n", index);
+    LOG_DBG(stream, DBG_PARSER, "Done searching node with index = %d...\n",
+            index);
     return !n ? NULL : (flow_base_t *)n->value;
   }
 }
@@ -160,7 +161,7 @@ parsed_payload pop_head_payload(Node **flow_direction) {
 
   if (node == NULL) {
     printf("flow is empty, nothing to delete\n");
-  }  
+  }
   /*
   Node *node;
   // parsed_payload null_data;
@@ -173,11 +174,11 @@ parsed_payload pop_head_payload(Node **flow_direction) {
       fprintf(stream, "flow is empty, nothing to delete\n");
       free_payload_node(node);
       return NULL;//null_data;
-    }    
+    }
   } else {
     free_payload_node(node);
     return NULL;//null_data;
-  } 
+  }
   */
   parsed_payload payload = *(parsed_payload *)node->value;
   free_payload_node(node);
@@ -197,7 +198,13 @@ void free_flow_direction(Node *flow_direction) {
   Node *temp = flow_direction;
   while (temp != NULL) {
     Node *next = temp->next;
-    free_payload_node(temp);
+    free_pkt_node(temp);
     temp = next;
   }
+}
+
+// free a packet node in a flow
+void free_pkt_node(Node *pkt_node) {
+  free((u_char *)((parsed_packet *)pkt_node->value)->payload.data);
+  free_node(pkt_node);
 }

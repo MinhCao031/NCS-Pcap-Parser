@@ -2,8 +2,8 @@
 #define HASH_TABLE_H
 
 #include "flow_api.h"
-#include "parsers.h"
 #include "log.h"
+#include "parsers.h"
 
 typedef struct {
   size_t size;
@@ -23,10 +23,10 @@ void insert_new_flow(HashTable table, Node *const flow_node);
 
 // Insert a packet into a flow
 void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
-                    Node **flow_direction, FILE* fptr);
+                    Node **flow_direction, FILE *fptr);
 
 // search for a flow with the given key
-flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* fptr);
+flow_base_t *search_flow(HashTable const table, uint64_t key, FILE *fptr);
 
 // delete a flow with the given key
 void delete_flow(HashTable table, uint64_t key);
@@ -48,5 +48,8 @@ void free_payload_node(Node *payload_node);
 
 // free all payload nodes in a flow and free flow
 void free_flow_direction(Node *flow_direction);
+
+// free a packet node in a flow
+void free_pkt_node(Node *pkt_node);
 
 #endif
