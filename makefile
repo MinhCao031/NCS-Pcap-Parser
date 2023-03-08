@@ -1,14 +1,16 @@
-CFLAGS += -lpcap -Wall -Wextra -Wpedantic \
-          -Wformat=2 -Wno-unused-parameter -Wshadow \
+CFLAGS += -lpcap -Wall -Wextra -Wformat=2 -Wno-unused-parameter -Wshadow \
           -Wwrite-strings -Wstrict-prototypes -Wold-style-definition \
           -Wredundant-decls -Wnested-externs -Wmissing-include-dirs
 
-run: com
-	./test.o
+LINKLIB += `pkg-config --cflags --libs glib-2.0`
 
-com: 
-	gcc  -g -o test.o test.c lib/dissection.c lib/hash_table.c lib/parsers.c lib/linked_list.c lib/handler.c $(CFLAGS)
+run: com clean
+	./main.o
+
+com: clean
+	gcc -O3 -o main.o main.c lib/dissection.c lib/hash_table.c lib/parsers.c lib/linked_list.c lib/handler.c $(CFLAGS)
 
 clean:
-	rm -f test.o parse_offline.o parse_online.o 
-	rm -f output*.txt
+	clear
+	rm -rf *.o output*.txt
+	

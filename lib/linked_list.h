@@ -12,27 +12,25 @@ typedef struct Node {
 } Node;
 
 // insert node by order desc (key) in the list
-void insert_node_desc(Node **head, Node *const new_node, FILE* fptr);
+void insert_node_desc(Node **head, Node *const new_node, FILE* stream);
 // insert node by order asc (key) in the list
-void insert_node_asc(Node **head, Node *const node);
+void insert_node_asc(Node **head, Node *const node, FILE* stream);
 // insert end of list
-void insert_last_node(Node **head, Node *const node);
+void insert_last_node(Node **head, Node **tail, Node *const node, FILE* stream);
 // insert head of list
 void insert_first_node(Node **head, Node *const node);
-// insert to waiting list
-void insert_to_wait(Node **head, Node *const node, FILE* fptr);
-
 // Search for a node with the given key
 Node *search_node(Node const *head, uint64_t key);
 // Delete a node with the given key
-void delete_node(Node **head, uint64_t key, FILE* fptr);
+void delete_node_with_prev(Node** prev, FILE* stream);
 // Free all nodes in the list
 void free_list(Node *head);
 // free a node and it's data
 void free_node(Node *node);
 // Get number of nodes in the list
-uint get_list_size(Node const *head);
+uint32_t get_list_size(Node const *head);
 // pop the head node in the list
-Node *pop_first_node(Node **head);
+void pop_first_node(Node **head);
 
 #endif
+  
