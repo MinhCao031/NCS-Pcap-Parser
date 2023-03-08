@@ -73,9 +73,14 @@ typedef struct __flow_base_s {
   // pkt_close_flow = 10*x + 0 means ONLY flow_down is still open (x > 0)
   // pkt_close_flow = 10*x + y means BOTH flows are closed (x,y > 0)
 
+  // Head of the forward flow
   Node *flow_up;
+  // Tail of the forward flow
   Node *last_up;
+  
+  // Head of the backward flow
   Node *flow_down;
+  // Tail of the backward flow
   Node *last_down;
 
 } flow_base_t;

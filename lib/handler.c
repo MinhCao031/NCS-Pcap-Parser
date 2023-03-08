@@ -47,7 +47,7 @@ void insert_packet(HashTable table, parsed_packet pkt, FILE* stream) {
 
 // insert tcp packet to flow
 void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream) {
-  LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %ld...\n", flow_key);
+  LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %lu...\n", flow_key);
   flow_base_t *flow = search_flow(table, flow_key, stream);
   LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
@@ -142,7 +142,7 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
 
 // insert udp packet to flow
 void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream) {
-  LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %ld...\n", flow_key);
+  LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %lu...\n", flow_key);
   flow_base_t *flow = search_flow(table, flow_key, stream);
   LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
@@ -154,10 +154,10 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP to flow...\n");
     insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), NULL, stream);
+    new_flow.total_payload_up = pkt.payload.data_len;
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP flow to table...\n");
     insert_new_flow(table, create_flow_node(flow_key, new_flow, stream));
-    flow->total_payload_up += pkt.payload.data_len;
 
     LOG_DBG(stream, DBG_PARSER, "New UDP flow created, done inserting UDP\n");
     inserted_packets += 1;
@@ -165,7 +165,8 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   else {
     LOG_DBG(stream, DBG_PARSER, "Flow found, inserting UDP to flow...\n");
     insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), NULL, stream);
-    if (get_flow_direction(flow, pkt, stream) == flow->flow_up)
+
+    if (get_flow_direction(flow, pkt, stream) == &(flow->flow_up))
       flow->total_payload_down += pkt.payload.data_len;
     else flow->total_payload_up += pkt.payload.data_len;
 
@@ -362,13 +363,20 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
     int32_t diff = sequence[iter] + payload[iter] - sequence[track_head];
     LOG_DBG(stream, DBG_PARSER, "\t\tp%u,p%u\t-> ", iter, track_head);
     LOG_DBG(stream, DBG_PARSER, "%10u + %4u vs %10u -> %4d\t", sequence[iter], payload[iter], sequence[track_head], diff);
-    if (diff < -1 && payload[iter] > 0) {
-			LOG_DBG(stream, DBG_PARSER, " => case 1: delete from %d to %d\n", iter - step, track_tail);
+    if (diff < -1) {
+			LOG_DBG(stream, DBG_PARSER, " => case 1: delete from %d to %d", iter - step, track_tail);
+      // Delete all the way back
       for (int del = iter - step; del <= track_tail; del -= step) removable[del]++;
 			track_tail = iter;
 			do {
 				track_head += step;
 			} while (track_head >= 0 && track_head < flow_len && removable[track_head] > 0);
+      if (payload[iter] == 0) {
+        removable[iter]++;
+        LOG_DBG(stream, DBG_PARSER, ", also consider %d\n", iter);
+      } else {
+        LOG_DBG(stream, DBG_PARSER, "\n");
+      }
     } else if (payload[iter] <= diff) {
 			LOG_DBG(stream, DBG_PARSER, " => case 2: delete %d\n", iter);
       removable[iter]++;
@@ -390,7 +398,7 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
   for (int32_t i = 0; i < flow_len; ++i) {
     LOG_DBG(stream, DBG_PARSER, "\t\tp%u:\tseq %10u len %4u\t-> Marked %d\n", i, sequence[i], payload[i], removable[i]);
   }
-  LOG_DBG(stream, DBG_PARSER, "\t\tMarking Done\n");
+  LOG_DBG(stream, DBG_PARSER, "\t\tMarking Done\n\t\tDeleting packet...\t");
 
   // Delete the marked packet
   for (iter = 0, node = *head; node->next != NULL; iter++) {
@@ -400,11 +408,11 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
       free_node(tmp);
       inserted_packets -= 1;
       filtered_packets += 1;
-      LOG_DBG(stream, DBG_PARSER, "\t\tDeleting packet #%u...\n", iter+1);
+      LOG_DBG(stream, DBG_PARSER, "#%u, ", iter+1);
       continue;
     } else node = node->next;
   }
-  LOG_DBG(stream, DBG_PARSER, "\t\tChecking Length = %u\n\t\tChecking number of packets = %u\n",
+  LOG_DBG(stream, DBG_PARSER, "\n\t\tChecking Length = %u\n\t\tChecking number of packets = %u\n",
     get_list_size(*head), inserted_packets
   );
 }
@@ -414,8 +422,8 @@ void print_hashtable(HashTable const table, FILE* stream) {
   LOG_DBG(stream, DBG_FLOW, "********* HASH TABLE (NON-EMPTY ONLY) *********\n");
   for (uint32_t i = 0; i < table.size; i++) {
     Node *head = table.lists[i];
-    LOG_DBG(stream, DBG_FLOW, "Id [%d]: \n", i);
     if (!head) continue;
+    LOG_DBG(stream, DBG_FLOW, "Id [%d]: \n", i);
     print_flows(head, stream);
     LOG_DBG(stream, DBG_FLOW, "\n");
   }

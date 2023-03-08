@@ -21,7 +21,7 @@
 
 // ASC to insert packet in ascending sequence, otherwise DESC
 #define DATA_DIRECTION ASC
-#define PCAP_FILE "sample_UDP_2.pcap"
+#define PCAP_FILE "sample_TCP_3.pcap"
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030
