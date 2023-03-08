@@ -6,7 +6,7 @@ Thu thập, lọc, trích xuất và lưu trữ dữ liệu mạng
 	- Biên dịch: `make com`
 	- Biên dịch và chạy: `make run`
 	- Dọn dẹp: `make clean`
-2. Main file: `test. c`
+2. Main file: main.c`
 	- Đọc dữ liệu từ file `sample.pcap`
 	- In ra thông tin các packet trong 1 flow ra file `output_wireshark.txt` sử dụng hàm print_flow()
 	- Có thể xem quá trình đọc packet trong file pcap được in ra trong file `output_parse_packet.txt`
