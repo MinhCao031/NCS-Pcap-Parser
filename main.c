@@ -1,7 +1,5 @@
 #include "lib/handler.h"
 #include "lib/log.h"
-#include <time.h>
-#include <sys/time.h>
 #include <pcap.h>
 
 void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE* fout_list_flow);
@@ -150,6 +148,7 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     LOG_DBG(fout_parser, 1,"<=%-6u nanosec: %5u time(s)\n", (i-15)*10000, sttstc[i]);
   }
   LOG_DBG(fout_parser, 1,"> 100000 nanosec: %5u time(s)\n", sttstc[26]);
+  //print_hashtable(table, fout_list_flow);
 
   clock_gettime(CLOCK_REALTIME, &pkt_start);
   review_table(table, fout_seq_filter);
@@ -161,10 +160,12 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
 
   print_hashtable(table, fout_list_flow);
 
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of flows: %d\n", count_flows(table));
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of packets: %d ~ %d\n", count_packets(table), inserted_packets);
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of filtered packets: %d\n", filtered_packets);
+  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of packets: %u\n", packet_count);
+  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of flows: %u\n", count_flows(table));
+  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of inserted packets: %u\n", inserted_packets);
+  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of filtered packets: %u\n", filtered_packets);
 
   LOG_DBG(fout_parser, 1, "Program run successfully");
+  printf("Freeing...\n");
   free_hash_table(table);
 }

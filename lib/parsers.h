@@ -4,8 +4,8 @@
 #include "dissection.h"
 
 typedef struct {
-  u_char const *data;
   uint32_t data_len;
+  u_char const *data;
 } parsed_payload;
 
 typedef struct {

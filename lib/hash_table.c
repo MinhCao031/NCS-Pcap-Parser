@@ -37,7 +37,6 @@ void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
 
   if (insert_type == FIRST) {
     insert_first_node(flow_head, pkt_node);
-    
   }
 
   if (insert_type == LAST) {
@@ -126,17 +125,10 @@ uint32_t count_packets(HashTable const table) {
     node_flow_temp = table.lists[i];
     while (node_flow_temp != NULL) {
       flow_base_t* flow_temp = ((flow_base_t *)node_flow_temp->value);
-
-      if (flow_temp->total_payload_down > 0) {
-        Node *flow_down_temp = flow_temp->flow_down;
-        count += get_list_size(flow_down_temp);
-      }
-
-      if (flow_temp->total_payload_up > 0) {
-        Node *flow_up_temp = flow_temp->flow_up;
-        count += get_list_size(flow_up_temp);
-      }
-
+      Node *flow_down_temp = flow_temp->flow_down;
+      count += get_list_size(flow_down_temp);
+      Node *flow_up_temp = flow_temp->flow_up;
+      count += get_list_size(flow_up_temp);
       node_flow_temp = node_flow_temp->next;
     }
   }
@@ -168,6 +160,8 @@ uint32_t get_flow_size(flow_base_t const *flow) {
 void free_payload_node(Node *payload_node) {
   // free payload data
   free((u_char *)((parsed_payload *)payload_node->value)->data);
+  //// ((parsed_payload *)payload_node->value)->data = NULL;
+
   free_node(payload_node);
 }
 

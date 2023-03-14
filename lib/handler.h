@@ -5,6 +5,8 @@
 #include "hash_table.h"
 #include "parsers.h"
 #include "log.h"
+#include <time.h>
+#include <sys/time.h>
 
 extern uint32_t inserted_packets;
 extern uint32_t filtered_packets;
@@ -37,7 +39,7 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
 void review_table(HashTable table, FILE* stream);
 
 // filter out wrong-segment payload part 2/2: filter in each flow
-void filter_packet(Node** head, uint32_t init_seq, FILE* stream);
+void filter_packet(Node** head, uint32_t* init_seq, FILE* stream);
 
 // iterate through all ID in hashtable to print
 void print_hashtable(HashTable const table, FILE* stream);

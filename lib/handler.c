@@ -60,18 +60,29 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   if (flow == NULL || HAS_SYN_FLAG || (flow->pkt_close_flow/10 && flow->pkt_close_flow%10) ) { 
     // Insert to flow-up when it has SYN (Flag = 0x002)
     if (HAS_SYN_ONLY) {
+      // struct timespec time_syn[10]; int time_point = 0;
       LOG_DBG(stream, DBG_PARSER, "TCP flow not found, but SYN flag detected\n");
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  0
       flow_base_t new_flow = create_flow(pkt, stream);
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  1
       Node *new_pkt_node = create_payload_node(pkt, stream);
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  2
       insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), &(new_flow.last_up), stream);
-      LOG_DBG(stream, DBG_PARSER && !(new_flow.last_up), "Last node UP is NULL\n");
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  3
       new_flow.last_up = new_flow.flow_up;
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  4
       insert_new_flow(table, create_flow_node(flow_key, new_flow, stream));
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  5
       inserted_packets += 1;
       LOG_DBG(stream, DBG_PARSER, "TCP got the first flow-up packet\n");
       LOG_DBG(stream, DBG_PARSER, "Checking again flow status = %u\n", new_flow.pkt_close_flow);
       LOG_DBG(stream, DBG_PARSER, "Checking again init seq = %u & %u\n", new_flow.init_seq_up, new_flow.init_seq_down);
       LOG_DBG(stream, DBG_PARSER && !(new_flow.last_up), "Last node UP is still NULL\n");
+      // printf("Time of SYN =");
+      // for (int iii = 1; iii < 6; iii++)
+      //   printf("\t%lu", time_syn[iii].tv_nsec - time_syn[iii-1].tv_nsec);
+      // printf("\n");
+      
     }
 
     // Insert to flow-down when it has SYN+ACK (Flag = 0x012)
@@ -188,11 +199,13 @@ Node *create_payload_node(parsed_packet pkt, FILE* stream) {
   assert(value != NULL);
 
   // allocate memory for payload
+  // u_char* payload = pkt.payload.data;
   u_char *const payload = malloc(pkt.payload.data_len);
   memcpy(payload, pkt.payload.data, pkt.payload.data_len);
 
   // copy payload to value
   *value = (parsed_payload){.data = payload, .data_len = pkt.payload.data_len};
+
 
   // move packet data to node
   node->value = value;
@@ -222,32 +235,30 @@ Node *create_flow_node(uint64_t key, flow_base_t flow, FILE* stream) {
 
 // create new flow from packet info and initialize flow direction
 flow_base_t create_flow(parsed_packet pkt, FILE* stream) {
-
   return pkt.ip_header.ip_p == IPPROTO_TCP
-			 ? (flow_base_t){
-				   .sip = pkt.ip_header.ip_src,
-				   .dip = pkt.ip_header.ip_dst,
-				   .sp= pkt.tcp.source,
-				   .dp= pkt.tcp.dest,
-				   .ip_proto = pkt.ip_header.ip_p,
-           .init_seq_up = pkt.tcp.seq,
-           .pkt_close_flow = 1, // Must use SYN+ACK to turn this to 0 (open to flow_down)
-				   .flow_up = NULL,
-           .last_up = NULL,
-				   .flow_down = NULL,
-           .last_down = NULL,
-			   }
-			 : (flow_base_t){
-				   .sip = pkt.ip_header.ip_src,
-				   .dip = pkt.ip_header.ip_dst,
-				   .sp= pkt.udp.source,
-				   .dp= pkt.udp.dest,
-				   .ip_proto = pkt.ip_header.ip_p,
-				   .flow_up = NULL,
-           .last_up = NULL,
-				   .flow_down = NULL,
-           .last_down = NULL,
-			   };
+    ? (flow_base_t){
+      .sip = pkt.ip_header.ip_src,
+      .dip = pkt.ip_header.ip_dst,
+      .sp= pkt.tcp.source,
+      .dp= pkt.tcp.dest,
+      .ip_proto = pkt.ip_header.ip_p,
+      .init_seq_up = pkt.tcp.seq,
+      .pkt_close_flow = 1, // Must use SYN+ACK to turn this to 0 (open to flow_down)
+      .flow_up = NULL,
+      .last_up = NULL,
+      .flow_down = NULL,
+      .last_down = NULL,
+    } : (flow_base_t){
+      .sip = pkt.ip_header.ip_src,
+      .dip = pkt.ip_header.ip_dst,
+      .sp= pkt.udp.source,
+      .dp= pkt.udp.dest,
+      .ip_proto = pkt.ip_header.ip_p,
+      .flow_up = NULL,
+      .last_up = NULL,
+      .flow_down = NULL,
+      .last_down = NULL,
+    };
 }
 
 // get flow direction by compare src ip of the packet with the flow
@@ -280,11 +291,20 @@ void review_table(HashTable const table, FILE* stream) {
         } else if (flow.ip_proto == IPPROTO_TCP) {
           LOG_DBG(stream, DBG_PARSER, "Key: %lu:\n", scanner->key);
           LOG_DBG(stream, DBG_PARSER, "\tTCP flow up\n");
-
-          filter_packet(&flow.flow_up, flow.init_seq_up, stream);
-
+          filter_packet(&flow.flow_up, &flow.total_payload_up, stream);
           LOG_DBG(stream, DBG_PARSER, "\tTCP flow down\n");
-          filter_packet(&flow.flow_down, flow.init_seq_down, stream);
+          filter_packet(&flow.flow_down, &flow.total_payload_down, stream);
+          LOG_DBG(stream, DBG_PARSER, "\tChecking payload data: %u & %u\n", flow.total_payload_up, flow.total_payload_down);
+          if (flow.total_payload_up + flow.total_payload_down == 0) {
+            LOG_DBG(stream, DBG_PARSER, "\tNo payload after filtering!\n");
+            is_head_removed++;
+            inserted_packets -= 2;
+            filtered_packets += 2;
+            LOG_DBG(stream, DBG_PARSER, "\t-> Should be deleted.\n");
+          } else {
+            ((flow_base_t *)scanner->value)->total_payload_up = flow.total_payload_up;
+            ((flow_base_t *)scanner->value)->total_payload_down = flow.total_payload_down;
+          }
         } else {
           LOG_DBG(stream, DBG_PARSER, "\tUDP flow?\n");
         }
@@ -305,9 +325,20 @@ void review_table(HashTable const table, FILE* stream) {
       if (flow.ip_proto == IPPROTO_TCP) {
         LOG_DBG(stream, DBG_PARSER, "Key: %lu:\n", scanner->next->key);
         LOG_DBG(stream, DBG_PARSER, "\tTCP flow up\n");
-        filter_packet(&flow.flow_up, flow.init_seq_up, stream);
+        filter_packet(&flow.flow_up, &(flow.total_payload_up), stream);
         LOG_DBG(stream, DBG_PARSER, "\tTCP flow down\n");
-        filter_packet(&flow.flow_down, flow.init_seq_down, stream);
+        filter_packet(&flow.flow_down, &(flow.total_payload_down), stream);
+      }
+      LOG_DBG(stream, DBG_PARSER, "\tChecking payload data: %u & %u\n", flow.total_payload_up, flow.total_payload_down);
+      if (flow.total_payload_up + flow.total_payload_down == 0) {
+        LOG_DBG(stream, DBG_PARSER, "\tNo payload after filtering!\n");
+        inserted_packets -= 2;
+        filtered_packets += 2;
+        delete_node_with_prev(&scanner, stream);
+        LOG_DBG(stream, DBG_PARSER, "\t-> Should be deleted.\n");
+      } else {
+        ((flow_base_t *)scanner->value)->total_payload_up = flow.total_payload_up;
+        ((flow_base_t *)scanner->value)->total_payload_down = flow.total_payload_down;
       }
       scanner = scanner->next;
     }
@@ -317,12 +348,12 @@ void review_table(HashTable const table, FILE* stream) {
 }
 
 // filter out wrong-segment payload part 2: filter in each flow
-void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
-
+void filter_packet(Node** head, uint32_t* total_payload, FILE* stream) {
   // Special cases
   Node *node = *head;
   if (!node) {
     LOG_DBG(stream, DBG_PARSER, "\t\tNothing to do\n");
+    total_payload = 0;
     return;
   }
   int32_t flow_len = get_list_size(*head);
@@ -340,7 +371,7 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
   for (int32_t i = 0; i < flow_len; ++i) {
     sequence[i] = node->key;
     payload[i] = ((parsed_payload*)(node->value))->data_len;
-    removable[i] = (i? 0: -5);
+    removable[i] = (i && payload[i]? 0: 1);
     node = node->next;
   }
 
@@ -356,7 +387,7 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
   // Iterator through array and marking
   LOG_DBG(stream, DBG_PARSER, 
     "\t\tFlow length = %u, Init seq = %u, Step = %d\n",
-    flow_len, init_seq, step
+    flow_len, sequence[0], step
   );
 
   do {
@@ -408,12 +439,27 @@ void filter_packet(Node** head, uint32_t init_seq, FILE* stream) {
       free_node(tmp);
       inserted_packets -= 1;
       filtered_packets += 1;
+      (*total_payload) = (*total_payload) - payload[1+iter];
       LOG_DBG(stream, DBG_PARSER, "#%u, ", iter+1);
       continue;
     } else node = node->next;
   }
-  LOG_DBG(stream, DBG_PARSER, "\n\t\tChecking Length = %u\n\t\tChecking number of packets = %u\n",
-    get_list_size(*head), inserted_packets
+
+  // if (!((*head)->next)) {
+  //   LOG_DBG(stream, DBG_PARSER, "\n\t\tMust delete them all\n");
+  //   // Node* tmp = *head;
+  //   // *head = NULL;
+  //   // free(tmp);
+  // } else {
+  //   LOG_DBG(stream, DBG_PARSER, "\n\t\tMust delete SYN\n");
+  //   // Node* tmp = *head;
+  //   // head = &(tmp->next);
+  //   // *head = tmp->next;
+  //   // free(tmp);
+  // }
+  LOG_DBG(stream, DBG_PARSER, 
+    "\n\t\tChecking Length = %u\n\t\tChecking number of packets = %u\n\t\tChecking payload = %u\n",
+    get_list_size(*head), inserted_packets, *total_payload
   );
 }
 
@@ -434,8 +480,11 @@ void print_flows(Node const *const head, FILE* stream) {
   const Node *scanner = head;
 
   while (scanner != NULL) {
-    LOG_DBG(stream, DBG_FLOW, "Key: %lu:\n", scanner->key);
-    print_flow(*(flow_base_t *)scanner->value, stream);
+    flow_base_t temp_flow = *(flow_base_t *)scanner->value;
+    if (temp_flow.total_payload_up + temp_flow.total_payload_down > 0) {
+      LOG_DBG(stream, DBG_FLOW, "Key: %lu:\n", scanner->key);
+      print_flow(*(flow_base_t *)scanner->value, stream);
+    }
     scanner = scanner->next;
   }
 }
@@ -443,16 +492,16 @@ void print_flows(Node const *const head, FILE* stream) {
 // print flow info like src ip, dst ip, src port, dst port, protocol and payload
 void print_flow(flow_base_t flow, FILE* stream) {
   // print ip addresses
-  LOG_DBG(stream, DBG_FLOW, "\t|ip: %s", inet_ntoa(flow.sip));
-  LOG_DBG(stream, DBG_FLOW, " <=> %s, ", inet_ntoa(flow.dip));
+  LOG_DBG(stream, DBG_FLOW, "\t|ip: %s <=> %s, ", inet_ntoa(flow.sip), inet_ntoa(flow.dip));
 
   // print port
-  LOG_DBG(stream, DBG_FLOW, "port: %d", flow.sp);
-  LOG_DBG(stream, DBG_FLOW, " <=> %d\n", flow.dp);
+  LOG_DBG(stream, DBG_FLOW, "port: %d <=> %d, ", flow.sp, flow.dp);
+
+  // print payload amount
+  LOG_DBG(stream, DBG_FLOW, "payload: %d vs %d\n", flow.total_payload_up, flow.total_payload_down);
 
   if (flow.ip_proto == IPPROTO_TCP) {
     LOG_DBG(stream, DBG_FLOW, "\t|Protocol: TCP\n");
-
     // print expected sequence number
     // LOG_DBG(stream, DBG_FLOW, "\t|exp seq DOWN: %u, ", flow.exp_seq_down);
     // LOG_DBG(stream, DBG_FLOW, "exp seq UP: %u\n", flow.exp_seq_up);
@@ -462,8 +511,10 @@ void print_flow(flow_base_t flow, FILE* stream) {
   }
 
   // print list of packets in the flow
-  print_flow_direction(flow.flow_up, true, stream);
-  print_flow_direction(flow.flow_down, false, stream);
+  if (flow.total_payload_up > 0) 
+  print_flow_direction((flow.flow_up), true, stream);
+  if (flow.total_payload_down > 0) 
+  print_flow_direction((flow.flow_down), false, stream);
 }
 
 //
@@ -550,21 +601,29 @@ char* convert_payload(char* payload, uint32_t length) {
 
 // print payload in a flow direction
 void print_flow_direction(Node const *head, bool is_up, FILE* stream) {
+  // LOG_DBG(stream, DBG_PARSER, "\t\tVerifying...\n");
+  if(!head) return;
+  // LOG_DBG(stream, DBG_PARSER, "\t\tVerify Done\n");
   Node const *temp = head;
   char const *direction = is_up ? "UP" : "DOWN";
-  // LOG_DBG(stream, DBG_PARSER, "\t\tChecking Length = %u\n", get_list_size(head));
+  LOG_DBG(stream, DBG_PARSER, "\t\tChecking Length = %u\n", get_list_size(head));
+
+  if (!temp) return;
 
   while (!(!temp)) {
     if (!((parsed_payload *)temp->value)) {
       LOG_DBG(stream, DBG_FLOW, "\t\t[END]\n");
       break;
-    } 
-    LOG_DBG(stream, DBG_FLOW, "\t\t[%s] ", direction);
-    LOG_DBG(stream, DBG_FLOW, "Seq: %ld, data size: %d\n", temp->key,
-           ((parsed_payload *)temp->value)->data_len);
-
-    print_payload(((parsed_payload *)temp->value)->data, ((parsed_payload *)temp->value)->data_len, stream);
-    LOG_DBG(stream, DBG_PAYLOAD, "\t\t-----------------------------------------------------------------------\n");
+    } else if (((parsed_payload *)temp->value)->data_len == 0) {
+      // LOG_DBG(stream, DBG_FLOW, "\t\t[Got in here?]\n");
+      inserted_packets -= 1;
+      filtered_packets += 1;
+    } else {
+      LOG_DBG(stream, DBG_FLOW, "\t\t[%s] ", direction);
+      LOG_DBG(stream, DBG_FLOW, "Seq: %ld, data size: %d\n", temp->key, ((parsed_payload *)temp->value)->data_len);
+      print_payload(((parsed_payload *)temp->value)->data, ((parsed_payload *)temp->value)->data_len, stream);
+      LOG_DBG(stream, DBG_PAYLOAD, "\t\t-----------------------------------------------------------------------\n");
+    }
 
     if (!(temp->next)) {
       break;

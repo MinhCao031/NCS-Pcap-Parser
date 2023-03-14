@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "parsers.h"
 
 typedef struct Node {
   uint64_t key;

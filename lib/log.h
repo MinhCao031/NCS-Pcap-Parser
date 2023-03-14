@@ -5,7 +5,7 @@
 #pragma once
 
 /* These below are just for debug */
-#define DBG_ALL 1
+#define DBG_ALL 0
 // 1 to print error, otherwise 0
 #define DBG_ERROR (DBG_ALL & 1)
 // 1 to print parser's process, otherwise 0
@@ -15,7 +15,7 @@
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
+#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 1)
 // 1 to print to console, otherwise 0
 #define DBG_CONSOLE (DBG_ALL & 1)
 
@@ -25,6 +25,9 @@
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030
+
+// If a sequence is too far from the previous one, that packet is consider ignored
+#define MAX_BYTE_DISTANCE (uint64_t)536870912
 
 // Some txt file to print when debugging
 #define FILELOG_ERR "outputERROR.txt"
@@ -96,9 +99,10 @@
     do                                                                                                        \
     {                                                                                                         \
         uint32_t sequence = pkt.tcp.seq;                                                                      \
-        if ((int32_t)(sequence - flow->init_seq_up) <= 0)                                                     \
+        LOG_DBG(stream, DBG_PARSER, "Check again sequence: %u > %u\n", sequence, flow->init_seq_up);          \
+        if ((uint32_t)(sequence - flow->init_seq_up) > MAX_BYTE_DISTANCE)                                     \
         {                                                                                                     \
-            LOG_DBG(stream, DBG_PARSER, "Lost sequence\n");                                                   \
+            LOG_DBG(stream, DBG_PARSER, "Lost sequence: %u < %u\n", sequence, flow->init_seq_up);             \
             break;                                                                                            \
         }                                                                                                     \
         else if (flow->pkt_close_flow / 10 > 0)                                                               \
@@ -134,9 +138,10 @@
     do                                                                                                            \
     {                                                                                                             \
         uint32_t sequence = pkt.tcp.seq;                                                                          \
-        if ((int32_t)(sequence - flow->init_seq_down) <= 0)                                                       \
+        LOG_DBG(stream, DBG_PARSER, "Check again sequence: %u > %u\n", sequence, flow->init_seq_down);            \
+        if ((uint32_t)(sequence - flow->init_seq_down) > MAX_BYTE_DISTANCE)                                       \
         {                                                                                                         \
-            LOG_DBG(stream, DBG_PARSER, "Lost sequence\n");                                                       \
+            LOG_DBG(stream, DBG_PARSER, "Lost sequence: %u < %u\n", sequence, flow->init_seq_down);               \
             break;                                                                                                \
         }                                                                                                         \
         else if (flow->pkt_close_flow % 10 > 0)                                                                   \
