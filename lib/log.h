@@ -5,7 +5,7 @@
 #pragma once
 
 /* These below are just for debug */
-#define DBG_ALL 0
+#define DBG_ALL 1
 // 1 to print error, otherwise 0
 #define DBG_ERROR (DBG_ALL & 1)
 // 1 to print parser's process, otherwise 0
@@ -114,7 +114,7 @@
         {                                                                                                     \
             uint32_t last_data_length = ((parsed_payload *)((flow->last_up)->value))->data_len;               \
             uint32_t last_seq = (flow->last_up)->key;                                                         \
-            Node *new_pkt_node = create_payload_node(pkt, stream);                                            \
+            Node *new_pkt_node = create_payload_node(pkt);                                                    \
             uint32_t data_length = ((parsed_payload *)new_pkt_node->value)->data_len;                         \
             LOG_INSERT_FLOW_UP;                                                                               \
             flow->total_payload_up += data_length;                                                            \
@@ -153,7 +153,7 @@
         {                                                                                                         \
             uint32_t last_data_length = ((parsed_payload *)((flow->last_down)->value))->data_len;                 \
             uint32_t last_seq = (flow->last_down)->key;                                                           \
-            Node *new_pkt_node = create_payload_node(pkt, stream);                                                \
+            Node *new_pkt_node = create_payload_node(pkt);                                                        \
             uint32_t data_length = ((parsed_payload *)new_pkt_node->value)->data_len;                             \
             LOG_INSERT_FLOW_DOWN;                                                                                 \
             flow->total_payload_down += data_length;                                                              \
@@ -199,7 +199,7 @@
 /*
 // Try inserting to flow_down
 #define TRY_INSERT_FLOW_DOWN(leng_data)                                       \
-    Node *new_pkt_node = create_payload_node(pkt, stream);                    \
+    Node *new_pkt_node = create_payload_node(pkt);                    \
     uint32_t data_length = ((parsed_payload *)new_pkt_node->value)->data_len; \
     if (leng_data == 0)                                                       \
         flow->exp_seq_down += 1;                                              \

@@ -18,7 +18,7 @@ uint64_t get_flow_key(uint64_t x1, uint64_t x2, uint64_t y1, uint64_t y2);
 Node *create_flow_node(uint64_t key, flow_base_t flow, FILE* stream);
 
 // create a node of payload
-Node *create_payload_node(parsed_packet pkt, FILE* stream);
+Node *create_payload_node(parsed_packet pkt);
 
 // create new flow from packet info and initialize flow direction
 flow_base_t create_flow(parsed_packet pkt, FILE* stream);
@@ -60,10 +60,10 @@ void print_payload(u_char const *payload, int32_t payload_size, FILE* stream);
 void print_hex_ascii_line(u_char const *const payload, int32_t len, int32_t offset, FILE* stream);
 
 // Get payloads of a single flow direction and store them as array of strings (double pointer of char)
-char** payload_to_strings(Node* flow_direction, FILE* stream);
+char** payload_to_strings(Node* flow_direction);
 
 // Get payloads of a single flow direction and concatenate them into a single string (pointer of char)
-char* payload_to_string(Node* flow_direction, FILE* stream);
+char* payload_to_string(Node* flow_direction);
 
 /* Convert payload string to an array of printable characters, will convert:
  *

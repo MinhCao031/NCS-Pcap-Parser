@@ -65,7 +65,7 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
       //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  0
       flow_base_t new_flow = create_flow(pkt, stream);
       //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  1
-      Node *new_pkt_node = create_payload_node(pkt, stream);
+      Node *new_pkt_node = create_payload_node(pkt);
       //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  2
       insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), &(new_flow.last_up), stream);
       //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  3
@@ -90,7 +90,7 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
       LOG_DBG(stream, DBG_PARSER, "SYN/ACK detected\n");
       flow->init_seq_down = pkt.tcp.seq;
       flow->pkt_close_flow = flow->pkt_close_flow / 10 * 10;
-      Node *new_pkt_node = create_payload_node(pkt, stream);
+      Node *new_pkt_node = create_payload_node(pkt);
       insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), &(flow->last_down), stream);
       LOG_DBG(stream, DBG_PARSER && !(flow->last_down), "Last node DOWN is NULL\n");
       flow->last_down = flow->flow_down;
@@ -157,7 +157,7 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   flow_base_t *flow = search_flow(table, flow_key, stream);
   LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
-  Node *new_pkt_node = create_payload_node(pkt, stream);
+  Node *new_pkt_node = create_payload_node(pkt);
 
   if (flow == NULL) {
     LOG_DBG(stream, DBG_PARSER, "UDP flow not found, creating new one\n");
@@ -189,7 +189,7 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
 }
 
 // create new packet node
-Node *create_payload_node(parsed_packet pkt, FILE* stream) {
+Node *create_payload_node(parsed_packet pkt) {
 
   Node *const node = malloc(sizeof(Node));
   assert(node != NULL);
@@ -517,8 +517,8 @@ void print_flow(flow_base_t flow, FILE* stream) {
   print_flow_direction((flow.flow_down), false, stream);
 }
 
-//
-char** payload_to_strings(Node* flow_direction, FILE* stream) {
+// Store all payload as array of strings
+char** payload_to_strings(Node* flow_direction) {
   int len = get_list_size(flow_direction);
   char** ans = (char**)calloc(len, sizeof(char*));
   
@@ -534,8 +534,8 @@ char** payload_to_strings(Node* flow_direction, FILE* stream) {
   return ans;
 }
 
-//
-char* payload_to_string(Node* flow_direction, FILE* stream) {
+// Append all payload into a string
+char* payload_to_string(Node* flow_direction) {
   uint32_t len = get_list_size(flow_direction);
   // uint32_t flen = (uint32_t)(((parsed_payload *)(flow_direction->value))->data_len);
   char* ans = (char*)malloc(len * 1460 * sizeof(char));
@@ -722,7 +722,7 @@ void print_hex_ascii_line(u_char const *const payload, int32_t len, int32_t offs
 }
 
 //
-char** get_payload_chars(Node* flow_direction, FILE* stream) {
+char** get_payload_chars(Node* flow_direction) {
   int len = get_list_size(flow_direction);
   char** ans = (char**)calloc(len, sizeof(char*));
   
@@ -737,7 +737,7 @@ char** get_payload_chars(Node* flow_direction, FILE* stream) {
 }
 
 //
-char* get_payload_string(Node* flow_direction, FILE* stream) {
+char* get_payload_string(Node* flow_direction) {
   char* ans = (char*)malloc(sizeof(char*));
   
   Node const *temp = flow_direction;
