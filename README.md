@@ -64,3 +64,13 @@ Với:
 # FAQ
 ## Tại sao tách code thao tác hash table?
 Mục tiêu là khiến HashTable độc lập nhất có thể (chỉ gồm các Linked List Flow chứa các Linked List Packet, các Node có dạng Key-Value), không liên quan đến cấu trúc dữ liệu của Node value
+
+## Cách cài glib để include không bị lỗi?
+Dùng lệnh sau để cài (chỉ hỗ trợ cho Linux):
+```
+sudo apt-get install libffi-dev libxml2-dev libglib2.0-dev
+```
+Ví dụ khi compile một đoạn code C dùng thư viện glib:
+```
+gcc `pkg-config --cflags --libs glib-2.0` -o code.o code.c
+```
