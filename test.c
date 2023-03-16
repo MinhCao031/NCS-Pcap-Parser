@@ -1,45 +1,17 @@
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 #include "lib/handler.h"
 #include "lib/log.h"
+#include "lib/parsers.h"
+#include <assert.h>
 #include <pcap.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+#include <time.h>
 
-#include <glib-2.0/glib.h>
-
-/*
- * See
- *
- *      http://support.microsoft.com/default.aspx?scid=kb;[LN];812455
- *
- * for the Exchange extensions.
- */
-static const struct {
-  const char *command;
-  int len;
-} commands[] = {
-    {"STARTTLS", 8},      /* RFC 2487 */
-    {"X-EXPS", 6},        /* Microsoft Exchange */
-    {"X-LINK2STATE", 12}, /* Microsoft Exchange */
-    {"XEXCH50", 7}        /* Microsoft Exchange */
-};
-#define NCOMMANDS (sizeof commands / sizeof commands[0])
-
-void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
-                 FILE *fout_list_flow);
-uint32_t sttstc[27];
-
-/*
- * A CMD is an SMTP command, MESSAGE is the message portion, and EOM is the
- * last part of a message
- */
-#define SMTP_PDU_CMD 0
-#define SMTP_PDU_MESSAGE 1
-#define SMTP_PDU_EOM 2
-
-struct smtp_proto_data {
-  guint16 pdu_type;
-  guint16 conversation_id;
-  gboolean more_frags;
-};
+#include <glib.h>
 
 /*
  * State information stored with a conversation.
@@ -96,37 +68,6 @@ struct smtp_session_state {
   uint32_t ntlm_rsp_frame;  /* Frame containing NTLM response. */
 };
 
-static gboolean line_is_smtp_command(const guchar *command, int commandlen) {
-  size_t i;
-
-  /*
-   * To quote RFC 821, "Command codes are four alphabetic
-   * characters".
-   *
-   * However, there are some SMTP extensions that involve commands
-   * longer than 4 characters and/or that contain non-alphabetic
-   * characters; we treat them specially.
-   *
-   * XXX - should we just have a table of known commands?  Or would
-   * that fail to catch some extensions we don't know about?
-   */
-  if (commandlen == 4 && g_ascii_isalpha(command[0]) &&
-      g_ascii_isalpha(command[1]) && g_ascii_isalpha(command[2]) &&
-      g_ascii_isalpha(command[3])) {
-    /* standard 4-alphabetic command */
-    return TRUE;
-  }
-
-  /*
-   * Check the list of non-4-alphabetic commands.
-   */
-  for (i = 0; i < NCOMMANDS; i++) {
-    if (commandlen == commands[i].len &&
-        g_ascii_strncasecmp(command, commands[i].command, commands[i].len) == 0)
-      return TRUE;
-  }
-  return FALSE;
-}
 int length_eol(const u_char *payload, int len, int offset,
                u_char *found_needle) {
   int i;
@@ -233,24 +174,26 @@ gint tvb_strneql(const u_char *tvb, const gint offset, const gchar *str,
   }
 }
 void smtp_decoder(u_char const *tvb, uint tvb_size,
-                  struct smtp_session_state *session_state, gboolean request) {
+                  struct smtp_session_state *session_state) {
 
-  struct smtp_proto_data *spd_frame_data;
-  int offset = 0;
-  const guchar *line, *linep, *lineend;
-  guint32 code;
-  int linelen = 0;
-  gint length_remaining;
-  gboolean eom_seen = FALSE;
-  gint next_offset;
-  gint loffset = 0;
-  int cmdlen;
+  int                        offset    = 0;
+  int                        request   = 0;
+  const guchar              *line, *linep, *lineend;
+  guint32                    code;
+  int                        linelen   = 0;
+  gint                       length_remaining;
+  gboolean                   eom_seen  = FALSE;
+  gint                       next_offset;
+  gint                       loffset   = 0;
+  int                        cmdlen;
   u_char *next_tvb;
-  guint8 line_code[3];
+  guint8                     line_code[3];
 
   if (tvb_size == 0) {
     return;
   }
+
+  printf("payload: %s\n", tvb);
 
   while (loffset < tvb_size) {
     linelen =
@@ -265,118 +208,29 @@ void smtp_decoder(u_char const *tvb, uint tvb_size,
      * We have to keep in mind that we may see what we want on
      * two passes through here ...
      */
-    if (session_state->smtp_state == SMTP_STATE_READING_DATA) {
+	if (session_state->smtp_state == SMTP_STATE_READING_DATA) {
       /*
        * The order of these is important ... We want to avoid
        * cases where there is a CRLF at the end of a packet and a
        * .CRLF at the beginning of the same packet.
        */
-      if ((session_state->crlf_seen &&
-           tvb_strneql(tvb, loffset, ".\r\n", 3) == 0) ||
-          tvb_strneql(tvb, loffset, "\r\n.\r\n", 5) == 0)
-        eom_seen = TRUE;
+	  if ((session_state->crlf_seen &&
+		   tvb_strneql(tvb, loffset, ".\r\n", 3) == 0) ||
+		  tvb_strneql(tvb, loffset, "\r\n.\r\n", 5) == 0)
+		eom_seen = TRUE;
 
-      length_remaining = tvb_size - loffset;
-      if (tvb_strneql(tvb, loffset + length_remaining - 2, "\r\n", 2) == 0)
-        session_state->crlf_seen = TRUE;
-      else
-        session_state->crlf_seen = FALSE;
-    }
-
-    if (request) {
-      line = tvb;
-
-      linep = line;
-      lineend = line + linelen;
-      while (linep < lineend && *linep != ' ')
-        linep++;
-      cmdlen = (int)(linep - line);
-      if (line_is_smtp_command(line, cmdlen)) {
-        if (g_ascii_strncasecmp(line, "DATA", 4) == 0) {
-          /*
-           * DATA command.
-           * This is a command, but everything that comes after it,
-           * until an EOM, is data.
-           */
-          session_state->smtp_state = SMTP_STATE_READING_DATA;
-          session_state->data_seen = TRUE;
-          printf("DATA command seen\n");
-        } else if (g_ascii_strncasecmp(line, "BDAT", 4) == 0) {
-          /*
-           * BDAT command.
-           * This is a command, but everything that comes after it,
-           * until given length is received, is data.
-           */
-          guint32 msg_len;
-
-          msg_len = (guint32)strtoul(line + 5, NULL, 10);
-
-          spd_frame_data->pdu_type = SMTP_PDU_CMD;
-          session_state->data_seen = TRUE;
-          session_state->msg_tot_len += msg_len;
-
-          if (msg_len == 0) {
-            /* No data to read, next will be a command */
-            session_state->smtp_state = SMTP_STATE_READING_CMDS;
-          } else {
-            session_state->smtp_state = SMTP_STATE_READING_DATA;
-          }
-
-          if (g_ascii_strncasecmp(line + linelen - 4, "LAST", 4) == 0) {
-            /*
-             * This is the last data chunk.
-             */
-            session_state->msg_last = TRUE;
-
-            if (msg_len == 0) {
-              /*
-               * No more data to expect.
-               * The message can now be reassembled.
-               */
-              spd_frame_data->more_frags = FALSE;
-            }
-          } else {
-            session_state->msg_last = FALSE;
-          }
-        } else if ((g_ascii_strncasecmp(line, "AUTH LOGIN", 10) == 0) &&
-                   (linelen <= 11)) {
-          /*
-           * AUTH LOGIN command.
-           * Username is in a separate frame
-           */
-          session_state->smtp_state = SMTP_STATE_READING_CMDS;
-          session_state->auth_state = SMTP_AUTH_STATE_START;
-        } else if ((g_ascii_strncasecmp(line, "AUTH LOGIN", 10) == 0) &&
-                   (linelen > 11)) {
-          /*
-           * AUTH LOGIN command.
-           * Username follows the 'AUTH LOGIN' string
-           */
-          session_state->smtp_state = SMTP_STATE_READING_CMDS;
-          session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
-        } else {
-          /*
-           * Regular command.
-           */
-        }
-      } else if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
-        session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
-      } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_REQ) {
-        session_state->auth_state = SMTP_AUTH_STATE_PASSWORD_RSP;
-      } else if (session_state->auth_state == SMTP_AUTH_STATE_PLAIN_REQ) {
-        session_state->auth_state = SMTP_AUTH_STATE_PLAIN_RSP;
-      } else if (session_state->auth_state == SMTP_AUTH_STATE_NTLM_CHALLANGE) {
-        session_state->auth_state = SMTP_AUTH_STATE_NTLM_RSP;
-      }
-    }
+	  length_remaining = tvb_size - loffset;
+	  if (tvb_strneql(tvb, loffset + length_remaining - 2, "\r\n", 2) == 0)
+		session_state->crlf_seen = TRUE;
+	  else
+		session_state->crlf_seen = FALSE;
+	}
 
     loffset = next_offset;
   }
-
-  printf("payload: %s\n", tvb);
 }
 
-void direction_browser(Node const *head, gboolean is_up,
+void direction_browser(Node const *head, bool is_up,
                        struct smtp_session_state *session_state) {
 
   Node const *temp = head;
@@ -384,46 +238,43 @@ void direction_browser(Node const *head, gboolean is_up,
   while (temp != NULL) {
 
     smtp_decoder(((parsed_payload *)temp->value)->data,
-                 ((parsed_payload *)temp->value)->data_len, session_state,
-                 is_up);
+                 ((parsed_payload *)temp->value)->data_len, session_state);
 
     temp = temp->next;
   }
 }
 
-void flow_browser(flow_base_t *flow) {
+void flow_browser(flow_base_t flow) {
 
-  if (flow == NULL) {
-    printf("ERROR: flow is null\n");
-    return;
-  }
   struct smtp_session_state session_state = {.smtp_state = SMTP_STATE_START,
                                              .auth_state = SMTP_AUTH_STATE_NONE,
                                              .msg_last = true};
 
-  direction_browser(flow->flow_up, true, &session_state);
-  direction_browser(flow->flow_down, false, &session_state);
+  direction_browser(flow.flow_up, true, &session_state);
+  direction_browser(flow.flow_down, false, &session_state);
 }
-int main(void) {
-  // error buffer
-  char errbuff[PCAP_ERRBUF_SIZE];
 
-  // open file and create pcap handler
-  pcap_t *const handler = pcap_open_offline(PCAP_FILE, errbuff);
-  if (handler == NULL) {
-    LOG_DBG(OUTPUT_0, DBG_ERROR, "Error opening file: %s\n", errbuff);
-    printf("Error opening file: %s\n", errbuff);
-    exit(EXIT_FAILURE);
+void get_mail_address(char *address, u_char const *payload, uint payload_size) {
+
+  uint start, end;
+
+  for (uint i = 0; i < payload_size; i++) {
+    if (payload[i] == '<') {
+      start = i + 1;
+    }
+
+    if (payload[i] == '>') {
+      end = i;
+    }
   }
 
-  get_packets(handler, OUTPUT_1, OUTPUT_2, OUTPUT_3);
+  int length = end - start;
 
-  pcap_close(handler);
-  fclose(OUTPUT_1);
-  fclose(OUTPUT_2);
-  fclose(OUTPUT_3);
-  fclose(OUTPUT_4);
-  return 0;
+  for (int i = 0; i < length; i++) {
+    address[i] = payload[start + i];
+  }
+
+  address[length] = '\0';
 }
 
 void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
@@ -435,27 +286,26 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
   // The actual packet
   u_char const *full_packet;
 
-  uint64_t process_time = 0;
-  uint64_t process_time_total = 0;
-  uint32_t packet_count = 0;
+  int packetCount = 0;
 
-  // create hash table
-  HashTable table = create_hash_table(HASH_TABLE_SIZE);
+  // create List of flow_stream
+  Node *temp = create_dumb_node(fout_list_flow);
+  Node *headlist = temp;
 
   while (pcap_next_ex(handler, &header_pcap, &full_packet) >= 0) {
 
     // Show the packet number & timestamp
-    GET_FULL_TIMESTAMP;
-    packet_count++;
-    // printf("%d ", packet_count++);
+    char full_timestamp[80];
+    struct tm ts = *localtime(&((header_pcap->ts).tv_sec));
+    strftime(full_timestamp, sizeof(full_timestamp), "%a %Y-%m-%d %H:%M:%S %Z",
+             &ts);
 
-    LOG_DBG(fout_parser, DBG_PARSER,
-            "Packet # %i\nTime in sec & microsec: %lu.%7lu\nFull timestamp "
-            "= %s\n",
-            packet_count, (header_pcap->ts).tv_sec, (header_pcap->ts).tv_usec,
-            full_timestamp);
-
-    int8_t progress_pkt = 1;
+    LOG_DBG(
+        fout_parser, DBG_PARSER,
+        "Packet # %i\nTime in sec & microsec: %lu.%6lu\nFull timestamp = %s\n",
+        ++packetCount, (header_pcap->ts).tv_sec, (header_pcap->ts).tv_usec,
+        full_timestamp);
+    LOG_SCR("Packet # %i\n", packetCount);
 
     // Dissection Step 1 of
     // 4----------------------------------------------------------------------
@@ -465,8 +315,6 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
       goto END;
     }
 
-    progress_pkt += 1;
-
     // Dissection Step 2 of
     // 4----------------------------------------------------------------------
     package packet = link_dissector(frame, fout_parser);
@@ -474,8 +322,6 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
       LOG_DBG(fout_parser, DBG_PARSER, "ERROR: Packet is not valid!\n");
       goto END;
     }
-
-    progress_pkt += 1;
 
     // Dissection Step 3 of
     // 4----------------------------------------------------------------------
@@ -485,8 +331,6 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
       goto END;
     }
 
-    progress_pkt += 1;
-
     // Dissection Step 4 of
     // 4----------------------------------------------------------------------
     package payload = transport_demux(segment, fout_parser);
@@ -495,45 +339,48 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
       goto END;
     }
 
-    progress_pkt += 1;
-
-    // Store packets in the hash table
+    // Store packets in the list
     parsed_packet pkt = pkt_parser(packet, segment, payload);
-    insert_packet(table, pkt, fout_parser);
-
+    insert_packet(&headlist, pkt, fout_parser);
     LOG_DBG(fout_parser, DBG_PARSER,
-            "----------------------------------------"
-            "-----------Successfully---------------\n");
-    if (packet_count > LIMIT_PACKET)
+            "-------------------------------------"
+            "-----------Successfully------------\n");
+    if (packetCount > LIMIT_PACKET)
       break;
     continue;
 
   END : {
     LOG_DBG(fout_parser, DBG_PARSER,
-            "----------------------------------------"
-            "---------PacketFailed-----------------\n");
-    if (packet_count > LIMIT_PACKET)
+            "-------------------------------------"
+            "---------PacketFailed--------------\n");
+    if (packetCount > LIMIT_PACKET)
       break;
   }
   }
 
-  review_table(table, fout_seq_filter);
+  review_flowlist(&headlist, fout_seq_filter);
 
-  print_hashtable(table, fout_list_flow);
+  flow_browser(*search_flow(&headlist, 2392258525328658816, stdout));
 
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of packets: %u\n",
-          packet_count);
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of flows: %u\n",
-          count_flows(table));
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of inserted packets: %u\n",
-          inserted_packets);
-  LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of filtered packets: %u\n",
-          filtered_packets);
+  free_flow_list(&headlist);
+}
+int main(void) {
+  // error buffer
+  char errbuff[PCAP_ERRBUF_SIZE];
 
-  LOG_DBG(fout_parser, 1, "Program run successfully");
+  // open file and create pcap handler
+  pcap_t *const handler = pcap_open_offline(PCAP_FILE, errbuff);
+  if (handler == NULL) {
+    LOG_DBG(OUTPUT_E, DBG_ERROR, "Error opening file: %s\n", errbuff);
+    exit(EXIT_FAILURE);
+  }
 
-  flow_browser(search_flow(table, 6813568831757104485, stdout));
+  get_packets(handler, OUTPUT_1, OUTPUT_2, OUTPUT_3);
 
-  printf("Freeing...\n");
-  free_hash_table(table);
+  pcap_close(handler);
+  fclose(OUTPUT_1);
+  fclose(OUTPUT_2);
+  fclose(OUTPUT_3);
+  fclose(OUTPUT_E);
+  return 0;
 }
