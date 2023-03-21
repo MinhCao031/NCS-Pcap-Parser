@@ -9,7 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <glib.h>
+#include <glib-2.0/glib.h>
 
 #include <pcap.h>
 #include <netinet/in.h>
@@ -25,7 +25,7 @@
 // 1 to print error, otherwise 0
 #define DBG_ERROR (DBG_ALL & 1)
 // 1 to print parser's process, otherwise 0
-#define DBG_PARSER (DBG_ALL & 1)
+#define DBG_PARSER (DBG_ALL & 0)
 // 1 to check and filter wrong sequences out, otherwise 0
 #define DBG_PKT_SEQ (DBG_ALL & 1)
 // 1 to print flow's info, otherwise 0
@@ -37,7 +37,7 @@
 
 // ASC to insert packet in ascending sequence, otherwise DESC
 #define DATA_DIRECTION ASC
-#define PCAP_FILE "sample_SMTP_2.pcap"
+#define PCAP_FILE "sendFile.pcapng"
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030

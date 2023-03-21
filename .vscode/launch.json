@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Open a core dump(C/C++)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.o",
+            "coreDumpPath": "${input:coreFileName}",
+            "cwd": "${fileDirname}",            
+            "MIMode": "gdb"
+        },
+        {
+            "name": "Debug C/C++ program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.o",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+        }
+    ],
+    "inputs": [
+        {
+          "id": "coreFileName",
+          "type": "promptString",
+          "description": "Enter core file path"
+        }
+      ]
+}

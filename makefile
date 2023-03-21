@@ -1,6 +1,6 @@
 LANGUAGE +=	-std=c99
 OPTIMIZE +=	-O3
-DEBUGGER +=	-g3
+DEBUG +=	-g3
 DEFINES +=	-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
 WARNING +=	-Wall -Wextra -Wformat=2 -Wno-unused-parameter -Wshadow	\
         	-Wwrite-strings -Wstrict-prototypes -Wold-style-definition		\
@@ -13,7 +13,7 @@ INCLUDED +=	`pkg-config --cflags --libs glib-2.0`
 CSOURCES +=	lib/dissection.c lib/parsers.c lib/linked_list.c lib/hash_table.c lib/handler.c main.c
 
 # Come after C files & should be ordered from independent to dependent
-LINKLIBS +=	-lpcap -lm
+LINKLIBS +=	-lpcap -lm -lglib-2.0
 
 # Should be the last argument
 OUTPFILE +=  main.o
@@ -25,7 +25,7 @@ dbg: com clean
 	gdb $(OUTPFILE)
 
 com: clean
-	gcc $(OPTIMIZE) $(WARNING) $(INCLUDED) $(CSOURCES) $(LINKLIBS) -o $(OUTPFILE)
+	gcc $(DEBUG)  $(WARNING) $(INCLUDED) $(CSOURCES) $(LINKLIBS) -o $(OUTPFILE)
 
 clean:
 	clear
