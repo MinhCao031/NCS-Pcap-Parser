@@ -102,6 +102,11 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     insert_packet(table, pkt, fout_parser);
 
     clock_gettime(CLOCK_REALTIME, &pkt_end);
+    // if (pkt.payload.data_len > 0) printf(
+    //   "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", packet_count,
+    //   pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
+    // );
+
     progress_pkt += 1;
     process_time = (pkt_end.tv_sec - pkt_start.tv_sec) * SEC2NANO + pkt_end.tv_nsec - pkt_start.tv_nsec;
     process_time_total += process_time;
@@ -157,12 +162,22 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
 
   print_hashtable(table, fout_list_flow);
 
+  // test a random flow
+  printf("\nTest 01: Get a random flow\n");
+  flow_base_t* flow_test = search_flow(table, 2523804475556696147, stdout);
+  if (flow_test) {
+    print_flow(*flow_test, stdout);
+    printf("\nTest 02: Get payloads in flow\n");
+    char* long_payload = payload_to_string(flow_test->head_flow, flow_test->total_payload);
+    // printf("All payload in this flow:\n%s\n\n<END OF FLOW>\n", long_payload);
+  } else printf("Flow not found.\n");
+
   LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of packets: %u\n", packet_count);
   LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of flows: %u\n", count_flows(table));
   LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of inserted packets: %u\n", inserted_packets);
   LOG_DBG(fout_list_flow, 1 + DBG_FLOW, "Number of filtered packets: %u\n", filtered_packets);
 
   LOG_DBG(fout_parser, 1, "Program run successfully");
-  printf("Freeing...\n");
+  printf("\nTest 03: Freeing...\n");
   // free_hash_table(table);
 }

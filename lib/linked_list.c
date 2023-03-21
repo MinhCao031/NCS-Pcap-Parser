@@ -43,12 +43,6 @@ uint32_t get_list_size(Node const *head) {
   Node const *n = head;
 
   while (n != NULL) {
-    // if (sizeof(n->value) == sizeof(parsed_payload*) && ((parsed_payload*)(n->value))->data_len == 0) {
-    //   //printf("***payload 0 detected***");
-    //   dbg_c++;
-    //   inserted_packets -= 1;
-    //   filtered_packets += 1;
-    // } else 
     size++;
     n = n->next;
   }
