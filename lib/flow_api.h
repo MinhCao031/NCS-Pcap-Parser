@@ -9,12 +9,13 @@
  *
  * Created on Tue Nov 08 2022
  */
+#ifndef FLOW_API_H
+#define FLOW_API_H
 
 #pragma once
 
-#include <netinet/in.h>
-
 #include "linked_list.h"
+#include "parsers.h"
 
 // flow API export for external module
 typedef struct __flow_base_s {
@@ -65,23 +66,36 @@ typedef struct __flow_base_s {
   uint32_t total_payload_up;   // total length of payload in flow up
   uint32_t total_payload_down; // total length of payload in flow down
 
-  // Notice when a flow is no longer open
-  // pkt_close_flow = 10*x + y means x requests to close flow_up & y requests to close flow_down
-  uint8_t pkt_close_flow;
-  // pkt_close_flow = 10*0 + 0 means BOTH flows are open
-  // pkt_close_flow = 10*0 + y means ONLY flow_up is still open (y > 0)
-  // pkt_close_flow = 10*x + 0 means ONLY flow_down is still open (x > 0)
-  // pkt_close_flow = 10*x + y means BOTH flows are closed (x,y > 0)
-
   // Head of the forward flow
   Node *flow_up;
   // Tail of the forward flow
   Node *last_up;
-  
+
   // Head of the backward flow
   Node *flow_down;
   // Tail of the backward flow
   Node *last_down;
+
+  // Head of the flow
+  Node *head_flow;
+  // Tail of the flow
+  Node *tail_flow;
+
+  uint32_t total_payload;
+  uint32_t current_seq;
+  uint32_t nxt_pkt_seq;
+  uint32_t current_ack;
+
+  // Notice when a flow is no longer open
+  // pkt_close_flow = 10*x + y means x requests to close flow_up & y requests to close flow_down
+  uint16_t pkt_close_flow;
+  // pkt_close_flow = 10*0 + 0 means BOTH flows are open
+  // pkt_close_flow = 10*0 + y means ONLY flow_up is still open (y > 0)
+  // pkt_close_flow = 10*x + 0 means ONLY flow_down is still open (x > 0)
+  // pkt_close_flow = 10*x + y means BOTH flows are closed (x,y > 0)
+  // pkt_close_flow = 100+     means BOTH flows are closed
+
+  uint16_t is_last_pkt_up;
 
 } flow_base_t;
 
@@ -92,3 +106,5 @@ typedef struct __flow_base_s {
 
 #define FLOW_FLAGS_DEBUG 0x0010
 #define FLOW_IS_DEBUG(f) (FLOW_PTR(f)->flags & FLOW_FLAGS_DEBUG)
+
+#endif /* FLOW_API_H */

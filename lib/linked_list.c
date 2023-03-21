@@ -1,8 +1,4 @@
-#include <pcap.h>
-#include <assert.h>
-#include "handler.h"
 #include "linked_list.h"
-#include "log.h"
 
 // Search for a node with the given key
 Node *search_node(Node const *head, uint64_t key) {

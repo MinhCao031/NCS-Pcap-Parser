@@ -1,12 +1,9 @@
 #ifndef HANDLER_H
 #define HANDLER_H
 
-
 #include "hash_table.h"
-#include "parsers.h"
-#include "log.h"
-#include <time.h>
-#include <sys/time.h>
+
+
 
 extern uint32_t inserted_packets;
 extern uint32_t filtered_packets;
@@ -22,6 +19,9 @@ Node *create_payload_node(parsed_packet pkt);
 
 // create new flow from packet info and initialize flow direction
 flow_base_t create_flow(parsed_packet pkt, FILE* stream);
+
+// Get direction of a packet by compare src ip of the packet with the flow
+bool is_packet_up(flow_base_t const *flow, parsed_packet pkt);
 
 // get flow direction by compare src ip of the packet with the flow
 Node **get_flow_direction(flow_base_t const *flow, parsed_packet pkt, FILE* stream);
@@ -49,6 +49,9 @@ void print_flows(Node const *const head, FILE* stream);
 
 // print all payloads in a flow
 void print_flow(flow_base_t flow, FILE* stream);
+
+// print all payloads in a merged flow
+void print_flow_merge(Node const *head, FILE* stream);
 
 // print all payloads in a flow direction
 void print_flow_direction(Node const *head, bool is_up, FILE* stream);

@@ -1,5 +1,4 @@
 #include "parsers.h"
-#include "dissection.h"
 
 parsed_packet pkt_parser(const package packet, const package segment,
                          const package payload) {
@@ -31,10 +30,13 @@ void tcp_parser(parsed_packet *pkt, package segment, package payload) {
   (*pkt).tcp.source = ntohs(tcp_header->source);
   (*pkt).tcp.dest = ntohs(tcp_header->dest);
   (*pkt).tcp.seq = ntohl(tcp_header->seq);
-  (*pkt).tcp.ack = ntohl(tcp_header->ack);
+  (*pkt).tcp.ack_seq = ntohl(tcp_header->ack_seq);
   (*pkt).tcp.th_flags = tcp_header->th_flags;
   (*pkt).payload.data = payload.header_pointer;
   (*pkt).payload.data_len = payload.package_size;
+
+  // printf("seq %u & %u\n", (*pkt).tcp.ack_seq, ntohl(tcp_header->ack_seq));
+
 
   // LOG_SCR("Protocol: TCP\n"); */
   // LOG_SCR("Source port: %d\n", (*pkt).src_port); */

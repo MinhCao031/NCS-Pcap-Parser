@@ -1,7 +1,5 @@
-#include <assert.h>
-#include <string.h>
 #include "handler.h"
-#include "log.h"
+
 
 uint32_t inserted_packets = 0;
 uint32_t filtered_packets = 0;
@@ -52,37 +50,44 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
   LOG_DBG(stream, DBG_PARSER && (flow != NULL), "---BEFORE INSERTING---\n"
-    "Checking flow status = %u\nChecking first seq = %u & %u\n",
-    flow->pkt_close_flow, flow->init_seq_up, flow->init_seq_down
+    "Checking flow status = %u\nChecking first seq = %u & %u\nBEFORE BEFORE = %u\n",
+    flow->pkt_close_flow, flow->init_seq_up, flow->init_seq_down, get_list_size(flow->head_flow)
   );
-  
+
   // Need a new flow
-  if (flow == NULL || HAS_SYN_FLAG || (flow->pkt_close_flow/10 && flow->pkt_close_flow%10) ) { 
+  if (flow == NULL || HAS_SYN_FLAG || (flow->pkt_close_flow/10 && flow->pkt_close_flow%10) ) {
     // Insert to flow-up when it has SYN (Flag = 0x002)
     if (HAS_SYN_ONLY) {
-      // struct timespec time_syn[10]; int time_point = 0;
       LOG_DBG(stream, DBG_PARSER, "TCP flow not found, but SYN flag detected\n");
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  0
       flow_base_t new_flow = create_flow(pkt, stream);
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  1
       Node *new_pkt_node = create_payload_node(pkt);
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  2
-      insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), &(new_flow.last_up), stream);
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  3
-      new_flow.last_up = new_flow.flow_up;
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  4
+      insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), &(new_flow.last_up), stream); //*old*//
+      new_flow.last_up = new_flow.flow_up; //*old*//
+      insert_to_flow(new_pkt_node, FIRST, &(new_flow.head_flow), &(new_flow.tail_flow), stream); //*new*//
+      new_flow.current_seq = new_flow.init_seq_up; //*new*//
+      new_flow.nxt_pkt_seq = new_flow.init_seq_up + 1; //*new*//
+      new_flow.is_last_pkt_up = 1; //*new*//
+      new_flow.tail_flow = new_flow.head_flow; //*new*//
       insert_new_flow(table, create_flow_node(flow_key, new_flow, stream));
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  5
       inserted_packets += 1;
       LOG_DBG(stream, DBG_PARSER, "TCP got the first flow-up packet\n");
       LOG_DBG(stream, DBG_PARSER, "Checking again flow status = %u\n", new_flow.pkt_close_flow);
       LOG_DBG(stream, DBG_PARSER, "Checking again init seq = %u & %u\n", new_flow.init_seq_up, new_flow.init_seq_down);
-      LOG_DBG(stream, DBG_PARSER && !(new_flow.last_up), "Last node UP is still NULL\n");
+      LOG_DBG(stream, DBG_PARSER && !(new_flow.last_up), "Last node UP is still NULL!!!\n");
+      LOG_DBG(stream, DBG_PARSER, "Tracking seq = %u -> %u, ack = %u\n",
+        new_flow.current_seq, new_flow.nxt_pkt_seq, new_flow.current_ack
+      );
+      // struct timespec time_syn[10]; int time_point = 0;
       // printf("Time of SYN =");
       // for (int iii = 1; iii < 6; iii++)
       //   printf("\t%lu", time_syn[iii].tv_nsec - time_syn[iii-1].tv_nsec);
       // printf("\n");
-      
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  0
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  1
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  2
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  3
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  4
+      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  5
     }
 
     // Insert to flow-down when it has SYN+ACK (Flag = 0x012)
@@ -91,48 +96,57 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
       flow->init_seq_down = pkt.tcp.seq;
       flow->pkt_close_flow = flow->pkt_close_flow / 10 * 10;
       Node *new_pkt_node = create_payload_node(pkt);
-      insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), &(flow->last_down), stream);
-      LOG_DBG(stream, DBG_PARSER && !(flow->last_down), "Last node DOWN is NULL\n");
-      flow->last_down = flow->flow_down;
-      inserted_packets += 1;      
+      insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), &(flow->last_down), stream); //*old*//
+      flow->last_down = flow->flow_down; //*old*//
+      insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); //*new*//
+      flow->current_seq = flow->init_seq_down; //*new*//
+      flow->current_ack = flow->nxt_pkt_seq; //*new*//
+      flow->nxt_pkt_seq = flow->init_seq_down + 1; //*new*//
+      flow->is_last_pkt_up = 0; //*new*//
+      inserted_packets += 1;
       LOG_DBG(stream, DBG_PARSER, "TCP got the first flow-down packet\n");
       LOG_DBG(stream, DBG_PARSER, "Checking again flow status = %u\n", flow->pkt_close_flow);
       LOG_DBG(stream, DBG_PARSER, "Checking again init seq = %u & %u\n", flow->init_seq_up, flow->init_seq_down);
-      LOG_DBG(stream, DBG_PARSER && !(flow->last_down), "Last node DOWN is still NULL\n");
+      LOG_DBG(stream, DBG_PARSER && !(flow->last_down), "Last node DOWN is still NULL!!!\n");
+      LOG_DBG(stream, DBG_PARSER, "Tracking seq = %u -> %u, ack = %u\n",
+        flow->current_seq, flow->nxt_pkt_seq, flow->current_ack
+      );
     }
-    
+
     // Exception
     else {
       LOG_DBG(stream, DBG_PARSER, "SYN not detected or flow closed...\n");
-    }  
-  } 
+    }
+  }
 
   // Insert to flow when it has FIN (Flag = 0x001, 0x011)
   else if (HAS_FIN_FLAG) {
     LOG_DBG(stream, DBG_PARSER, "FIN(ACK) detected, closing flow...\n");
-    INSERT_FINAL_NODE(1);
+    // INSERT_FINAL_NODE(1); //*old*//
   }
-  
+
   // Insert to flow when it has RST (Flag = 0x004, 0x014)
   else if (HAS_RST_FLAG) {
     LOG_DBG(stream, DBG_PARSER, "RST(ACK) detected, flows are closing...\n");
-    INSERT_FINAL_NODE(2);
+    // INSERT_FINAL_NODE(2); //*old*//
   }
 
   // Insert to flow when it has payload, usually PUSH+ACK (Flag = 0x018)
   else if (pkt.payload.data_len > 0 && pkt.payload.data_len < 8192) {
     LOG_DBG(stream, DBG_PARSER, "Payload detected. Try inserting...\n");
-    if (get_flow_direction(flow, pkt, stream) == &(flow->flow_up)) {
-      if (flow->pkt_close_flow / 10 > 0) {LOG_DBG(stream, DBG_PARSER, "Flow up not open?\n");}
-      else TRY_INSERT_FLOW_UP;
-    } else if (get_flow_direction(flow, pkt, stream) == &(flow->flow_down)) {
-      if (flow->pkt_close_flow % 10 > 0) {LOG_DBG(stream, DBG_PARSER, "Flow down not open?\n");}
-      else TRY_INSERT_FLOW_DOWN;
-    } else {
-      LOG_DBG(stream, DBG_PARSER, "UNEXPECTED PAYLOAD!!! (%d)\n", (int32_t)(pkt.payload.data_len));
-    }
-  } 
-    
+    TRY_INSERT_FLOW;
+
+    // if (get_flow_direction(flow, pkt, stream) == &(flow->flow_up)) { //*old*//
+    //   if (flow->pkt_close_flow / 10 > 0) {LOG_DBG(stream, DBG_PARSER, "Flow up not open?\n");} //*old*//
+    //   else //TRY_INSERT_FLOW_UP; //*old*//
+    // } else if (get_flow_direction(flow, pkt, stream) == &(flow->flow_down)) { //*old*//
+    //   if (flow->pkt_close_flow % 10 > 0) {LOG_DBG(stream, DBG_PARSER, "Flow down not open?\n");} //*old*//
+    //   else //TRY_INSERT_FLOW_DOWN; //*old*//
+    // } else { //*old*//
+    //  LOG_DBG(stream, DBG_PARSER, "UNEXPECTED PAYLOAD!!! (%d)\n", (int32_t)(pkt.payload.data_len)); //*old*//
+    // } //*old*//
+  }
+
   // When it has ACK only (Flag = 0x010)
   else if (HAS_ACK_ONLY) {
     LOG_DBG(stream, DBG_PARSER, "ACK detected & no payload, temporarily ignoring...\n");
@@ -142,10 +156,10 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   else {
     LOG_DBG(stream, DBG_PARSER, "Flag = %x\nPacket undefined, ignoring...\n", pkt.tcp.th_flags);
   }
-   
+
   LOG_DBG(stream, DBG_PARSER && (flow != NULL), "---AFTER INSERTING---\n"
-    "Checking again flow status = %u\nChecking again first seq = %u & %u\n",
-    flow->pkt_close_flow, flow->init_seq_up, flow->init_seq_down
+    "Checking again flow status = %u\nChecking again first seq = %u & %u\nAFTER AFTER = %u\n",
+    flow->pkt_close_flow, flow->init_seq_up, flow->init_seq_down, get_list_size(flow->head_flow)
   );
   LOG_DBG(stream, DBG_PARSER, "End of insert function\n");
   return;
@@ -164,22 +178,27 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
     flow_base_t new_flow = create_flow(pkt, stream);
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP to flow...\n");
-    insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), NULL, stream);
-    new_flow.total_payload_up = pkt.payload.data_len;
+    insert_to_flow(new_pkt_node, FIRST, get_flow_direction(&new_flow, pkt, stream), NULL, stream); //*old*//
+    insert_to_flow(new_pkt_node, FIRST, &(new_flow.head_flow), NULL, stream); //*new*//
+    new_flow.total_payload_up = pkt.payload.data_len; //*old*//
+    new_flow.total_payload += pkt.payload.data_len; //*new*//
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP flow to table...\n");
     insert_new_flow(table, create_flow_node(flow_key, new_flow, stream));
 
     LOG_DBG(stream, DBG_PARSER, "New UDP flow created, done inserting UDP\n");
+    LOG_DBG(stream, DBG_PARSER, "Check total length = %u\n", new_flow.total_payload);
     inserted_packets += 1;
-  } 
-  else {
+  } else {
     LOG_DBG(stream, DBG_PARSER, "Flow found, inserting UDP to flow...\n");
-    insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), NULL, stream);
+    insert_to_flow(new_pkt_node, FIRST, get_flow_direction(flow, pkt, stream), NULL, stream); //*old*//
+    insert_to_flow(new_pkt_node, FIRST, &(flow->head_flow), NULL, stream); //*new*//
 
-    if (get_flow_direction(flow, pkt, stream) == &(flow->flow_up))
-      flow->total_payload_down += pkt.payload.data_len;
-    else flow->total_payload_up += pkt.payload.data_len;
+    if (get_flow_direction(flow, pkt, stream) == &(flow->flow_up)) //*old*//
+      flow->total_payload_down += pkt.payload.data_len; //*old*//
+    else flow->total_payload_up += pkt.payload.data_len; //*old*//
+
+    flow->total_payload += pkt.payload.data_len; //*new*//
 
     LOG_DBG(stream, DBG_PARSER, "Flow found, done inserting UDP\n");
     inserted_packets += 1;
@@ -244,21 +263,17 @@ flow_base_t create_flow(parsed_packet pkt, FILE* stream) {
       .ip_proto = pkt.ip_header.ip_p,
       .init_seq_up = pkt.tcp.seq,
       .pkt_close_flow = 1, // Must use SYN+ACK to turn this to 0 (open to flow_down)
-      .flow_up = NULL,
-      .last_up = NULL,
-      .flow_down = NULL,
-      .last_down = NULL,
     } : (flow_base_t){
       .sip = pkt.ip_header.ip_src,
       .dip = pkt.ip_header.ip_dst,
       .sp= pkt.udp.source,
       .dp= pkt.udp.dest,
       .ip_proto = pkt.ip_header.ip_p,
-      .flow_up = NULL,
-      .last_up = NULL,
-      .flow_down = NULL,
-      .last_down = NULL,
     };
+}
+
+bool is_packet_up(flow_base_t const *flow, parsed_packet pkt) {
+  return pkt.ip_header.ip_src.s_addr == flow->sip.s_addr;
 }
 
 // get flow direction by compare src ip of the packet with the flow
@@ -481,7 +496,7 @@ void print_flows(Node const *const head, FILE* stream) {
 
   while (scanner != NULL) {
     flow_base_t temp_flow = *(flow_base_t *)scanner->value;
-    if (temp_flow.total_payload_up + temp_flow.total_payload_down > 0) {
+    if (1 && temp_flow.total_payload > 0) {
       LOG_DBG(stream, DBG_FLOW, "Key: %lu:\n", scanner->key);
       print_flow(*(flow_base_t *)scanner->value, stream);
     }
@@ -495,10 +510,10 @@ void print_flow(flow_base_t flow, FILE* stream) {
   LOG_DBG(stream, DBG_FLOW, "\t|ip: %s <=> %s, ", inet_ntoa(flow.sip), inet_ntoa(flow.dip));
 
   // print port
-  LOG_DBG(stream, DBG_FLOW, "port: %d <=> %d, ", flow.sp, flow.dp);
+  LOG_DBG(stream, DBG_FLOW, "port: %u <=> %u, ", flow.sp, flow.dp);
 
   // print payload amount
-  LOG_DBG(stream, DBG_FLOW, "payload: %d vs %d\n", flow.total_payload_up, flow.total_payload_down);
+  LOG_DBG(stream, DBG_FLOW, "payload: %u + %u vs %u\n", flow.total_payload_up, flow.total_payload_down, flow.total_payload);
 
   if (flow.ip_proto == IPPROTO_TCP) {
     LOG_DBG(stream, DBG_FLOW, "\t|Protocol: TCP\n");
@@ -510,11 +525,12 @@ void print_flow(flow_base_t flow, FILE* stream) {
     LOG_DBG(stream, DBG_FLOW, "\t|Protocol: UDP\n");
   }
 
+  print_flow_merge(flow.head_flow, stream); //*new*//
   // print list of packets in the flow
-  if (flow.total_payload_up > 0) 
-  print_flow_direction((flow.flow_up), true, stream);
-  if (flow.total_payload_down > 0) 
-  print_flow_direction((flow.flow_down), false, stream);
+  // if (flow.total_payload_up > 0)  //*old*//
+  // print_flow_direction((flow.flow_up), true, stream); //*old*//
+  // if (flow.total_payload_down > 0)  //*old*//
+  // print_flow_direction((flow.flow_down), false, stream); //*old*//
 }
 
 // Store all payload as array of strings
@@ -597,6 +613,37 @@ char* convert_payload(char* payload, uint32_t length) {
   *(ans + length) = '\0';
   // LOG_SCR("Converted:<<(%s)>>", ans);
   return ans;
+}
+
+// print payload in a flow direction
+void print_flow_merge(Node const *head, FILE* stream) {
+  // LOG_DBG(stream, DBG_PARSER, "\t\tVerifying...\n");
+  if(!head) return;
+  // LOG_DBG(stream, DBG_PARSER, "\t\tVerify Done\n");
+  Node const *temp = head;
+  if (!temp) return;
+  LOG_DBG(stream, DBG_PARSER, "\t\tChecking Length = %u\n", get_list_size(head));
+
+  while (!(!temp)) {
+    if (!((parsed_payload *)temp->value)) {
+      LOG_DBG(stream, DBG_FLOW, "\t\t[END]\n");
+      break;
+    } else if (((parsed_payload *)temp->value)->data_len == 0) {
+      // LOG_DBG(stream, DBG_FLOW, "\t\t[Got in here?]\n");
+      inserted_packets -= 1;
+      filtered_packets += 1;
+    } else {
+      LOG_DBG(stream, DBG_FLOW, "\t\t[MERGED] ");
+      LOG_DBG(stream, DBG_FLOW, "Seq: %ld, data size: %d\n", temp->key, ((parsed_payload *)temp->value)->data_len);
+      print_payload(((parsed_payload *)temp->value)->data, ((parsed_payload *)temp->value)->data_len, stream);
+      LOG_DBG(stream, DBG_PAYLOAD, "\t\t-----------------------------------------------------------------------\n");
+    }
+
+    if (!(temp->next)) {
+      break;
+    }
+    else temp = temp->next;
+  }
 }
 
 // print payload in a flow direction

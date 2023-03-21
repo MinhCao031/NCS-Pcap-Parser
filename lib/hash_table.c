@@ -1,6 +1,5 @@
 #include "hash_table.h"
-#include <stdio.h>
-#include <assert.h>
+
 
 // hash function
 uint32_t hash(uint64_t x, uint64_t len) {

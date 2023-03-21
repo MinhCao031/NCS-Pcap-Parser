@@ -1,6 +1,5 @@
-#include "lib/handler.h"
-#include "lib/log.h"
 #include <pcap.h>
+#include "lib/handler.h"
 
 void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE* fout_list_flow);
 uint32_t sttstc[27];
@@ -18,7 +17,7 @@ int main(void) {
   }
 
   get_packets(handler, OUTPUT_1, OUTPUT_2, OUTPUT_3);
-  
+
   pcap_close(handler);
   fclose(OUTPUT_1);
   fclose(OUTPUT_2);
@@ -55,7 +54,6 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
       packet_count, (header_pcap->ts).tv_sec, (header_pcap->ts).tv_usec, full_timestamp
     );
 
-    
     clock_gettime(CLOCK_REALTIME, &pkt_start);
     int8_t progress_pkt = 1;
 
@@ -148,10 +146,9 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     LOG_DBG(fout_parser, 1,"<=%-6u nanosec: %5u time(s)\n", (i-15)*10000, sttstc[i]);
   }
   LOG_DBG(fout_parser, 1,"> 100000 nanosec: %5u time(s)\n", sttstc[26]);
-  //print_hashtable(table, fout_list_flow);
 
   clock_gettime(CLOCK_REALTIME, &pkt_start);
-  review_table(table, fout_seq_filter);
+  // review_table(table, fout_seq_filter);
   clock_gettime(CLOCK_REALTIME, &pkt_end);
   process_time = (pkt_end.tv_sec - pkt_start.tv_sec) * SEC2NANO + pkt_end.tv_nsec - pkt_start.tv_nsec;
 
@@ -167,5 +164,5 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
 
   LOG_DBG(fout_parser, 1, "Program run successfully");
   printf("Freeing...\n");
-  free_hash_table(table);
+  // free_hash_table(table);
 }

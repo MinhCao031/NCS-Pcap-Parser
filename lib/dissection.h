@@ -1,15 +1,7 @@
 #ifndef DISSECTION_H
 #define DISSECTION_H
 
-#include <ctype.h>
-#include <pcap.h>
-#include <stdbool.h>
-
-#include <netinet/ether.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
+#include "log.h"
 
 #define ETHERNET_HEADER_SIZE 14
 #define IPv4 0x0008
@@ -17,7 +9,7 @@
 
 typedef struct {
   u_char const *header_pointer;
-  uint package_size;
+  uint32_t package_size;
   uint16_t type;
   bool is_valid;
 } package;

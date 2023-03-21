@@ -1,5 +1,4 @@
 #include "dissection.h"
-#include "log.h"
 
 // Dessection of ethernet frame, return a frame
 package frame_dissector(u_char const *packet,
@@ -67,6 +66,7 @@ package network_dissector(package packet, FILE* fout) {
       segment_size = ip_total_len - ip_header_size;
     }
     LOG_DBG(fout, DBG_PARSER, "### %u ### %u ### TCP ### %u ### %u ###\n", packet.package_size, ip_total_len, ip_header_size, segment_size);
+    // printf("header_pointer: %ld vs %u\n", strlen((char*)tcp), segment_size);
 
     return (package){.header_pointer = (u_char *)tcp,
                      .package_size = segment_size,

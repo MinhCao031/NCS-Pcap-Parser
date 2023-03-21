@@ -2,8 +2,8 @@
 #define HASH_TABLE_H
 
 #include "flow_api.h"
-#include "parsers.h"
-#include "log.h"
+
+
 
 typedef struct {
   size_t size;
