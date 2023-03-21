@@ -615,7 +615,7 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
 
   print_hashtable(table, fout_list_flow);
 
-  flow_browser(search_flow(table, 6813568831757104485, stdout));
+  flow_browser(search_flow(table, 6813568831684183325, stdout));
 
   LOG_DBG(fout_parser, 1, "Program run successfully");
   printf("Freeing...\n");
