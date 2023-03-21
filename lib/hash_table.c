@@ -100,9 +100,10 @@ void free_hash_table(HashTable table) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
-        free_flow_direction(((flow_base_t *)tmp->value)->flow_down);
-        free_flow_direction(((flow_base_t *)tmp->value)->flow_up);
-
+        free_payload_node(((flow_base_t *)tmp->value)->tail_flow);
+        free_flow_direction(((flow_base_t *)tmp->value)->head_flow);
+        // free_flow_direction(((flow_base_t *)tmp->value)->flow_down);
+        // free_flow_direction(((flow_base_t *)tmp->value)->flow_up);
         flow_temp = flow_temp->next;
       }
     }
@@ -124,10 +125,12 @@ uint32_t count_packets(HashTable const table) {
     node_flow_temp = table.lists[i];
     while (node_flow_temp != NULL) {
       flow_base_t* flow_temp = ((flow_base_t *)node_flow_temp->value);
-      Node *flow_down_temp = flow_temp->flow_down;
-      count += get_list_size(flow_down_temp);
-      Node *flow_up_temp = flow_temp->flow_up;
-      count += get_list_size(flow_up_temp);
+      // Node *flow_down_temp = flow_temp->flow_down;
+      // count += get_list_size(flow_down_temp);
+      // Node *flow_up_temp = flow_temp->flow_up;
+      // count += get_list_size(flow_up_temp);
+      Node *flow_data = flow_temp->head_flow;
+      count += get_list_size(flow_data);
       node_flow_temp = node_flow_temp->next;
     }
   }
@@ -150,9 +153,10 @@ uint32_t count_flows(HashTable const table) {
 
 // get number of nodes in a flow
 uint32_t get_flow_size(flow_base_t const *flow) {
-  uint32_t list_down_size = get_list_size(flow->flow_down);
-  uint32_t list_up_size = get_list_size(flow->flow_up);
-  return list_down_size + list_up_size;
+  // uint32_t list_down_size = get_list_size(flow->flow_down);
+  // uint32_t list_up_size = get_list_size(flow->flow_up);
+  // return list_down_size + list_up_size;
+  return get_list_size(flow->head_flow);
 }
 
 // free a node value and it's data in a flow

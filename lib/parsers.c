@@ -37,7 +37,6 @@ void tcp_parser(parsed_packet *pkt, package segment, package payload) {
 
   // printf("seq %u & %u\n", (*pkt).tcp.ack_seq, ntohl(tcp_header->ack_seq));
 
-
   // LOG_SCR("Protocol: TCP\n"); */
   // LOG_SCR("Source port: %d\n", (*pkt).src_port); */
   // LOG_SCR("Destination port: %d\n", (*pkt).dst_port); */

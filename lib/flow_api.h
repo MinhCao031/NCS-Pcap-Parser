@@ -53,28 +53,10 @@ typedef struct __flow_base_s {
   // offset 64 => next cache line
   struct timeval startts;
   struct timeval lastts; // fixme last pkt timestamp of flow
-  
-  // Expected sequence
-  // uint32_t exp_seq_up;   // direction up
-  // uint32_t exp_seq_down; // direction down
 
   // First sequence
   uint32_t init_seq_up;   // direction up
   uint32_t init_seq_down; // direction down
-
-  // total payload len
-  uint32_t total_payload_up;   // total length of payload in flow up
-  uint32_t total_payload_down; // total length of payload in flow down
-
-  // Head of the forward flow
-  Node *flow_up;
-  // Tail of the forward flow
-  Node *last_up;
-
-  // Head of the backward flow
-  Node *flow_down;
-  // Tail of the backward flow
-  Node *last_down;
 
   // Head of the flow
   Node *head_flow;
@@ -85,6 +67,7 @@ typedef struct __flow_base_s {
   uint32_t current_seq;
   uint32_t nxt_pkt_seq;
   uint32_t current_ack;
+  uint16_t is_last_pkt_up;
 
   // Notice when a flow is no longer open
   // pkt_close_flow = 10*x + y means x requests to close flow_up & y requests to close flow_down
@@ -95,7 +78,6 @@ typedef struct __flow_base_s {
   // pkt_close_flow = 10*x + y means BOTH flows are closed (x,y > 0)
   // pkt_close_flow = 100+     means BOTH flows are closed
 
-  uint16_t is_last_pkt_up;
 
 } flow_base_t;
 

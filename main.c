@@ -618,6 +618,6 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
   flow_browser(search_flow(table, 6813568831684183325, stdout));
 
   LOG_DBG(fout_parser, 1, "Program run successfully");
-  printf("Freeing...\n");
+  printf("\nTest 03: Freeing...\n");
   // free_hash_table(table);
 }

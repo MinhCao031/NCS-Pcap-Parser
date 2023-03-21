@@ -2,8 +2,8 @@ LANGUAGE +=	-std=c99
 OPTIMIZE +=	-O3
 DEBUG +=	-g3
 DEFINES +=	-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
-WARNING +=	-Wall -Wextra -Wformat=2 -Wno-unused-parameter -Wshadow	\
-        	-Wwrite-strings -Wstrict-prototypes -Wold-style-definition		\
+WARNING +=	-Wall -Wextra -Wformat=2 -Wno-unused-parameter -Wshadow		\
+        	-Wwrite-strings -Wstrict-prototypes -Wold-style-definition	\
         	-Wredundant-decls -Wnested-externs -Wmissing-include-dirs
 
 # Come before C files
