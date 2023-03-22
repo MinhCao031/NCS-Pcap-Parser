@@ -135,7 +135,7 @@ void pop_first_node(Node **head) {
   if (!head) return;
   Node *n = *head;
   if (!n) return;
-  Node *tmp = n;  
+  Node *tmp = n;
   *head = n->next;
   free(tmp);
 }

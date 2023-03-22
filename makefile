@@ -29,4 +29,4 @@ com: clean
 
 clean:
 	clear
-	rm -rf *.o output*.txt
+	rm -rf *.o output*.txt*

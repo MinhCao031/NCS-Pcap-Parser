@@ -28,6 +28,25 @@ package link_dissector(package ethernet_packet, FILE* fout) {
         ethernet_packet.header_pointer + ETHERNET_HEADER_SIZE;
     int ip_packet_size = ethernet_packet.package_size - ETHERNET_HEADER_SIZE;
 
+    // for (uint8_t i = (uint8_t)*ip_pointer; *ip_pointer != 0; ip_pointer++) {
+    //   printf("%u, ", i);
+    // }
+    // for (int i = 0; i < 20; i++) {
+    //   printf("%u, ", (uint8_t)*ip_pointer);
+    //   ip_pointer++;
+    // }
+    // for (int i = 0; i < 20; i++) {
+    //   ip_pointer--;
+    // }
+    // u_char const*IP_src = malloc(4 * sizeof(u_char));
+    // strncpy(IP_src, ip_pointer + 12, 4);
+    // IP_src[4] = '\0';
+
+    // u_char const*IP_dst = malloc(4 * sizeof(u_char));
+    // strncpy(IP_dst, ip_pointer + 16, 4);
+    // IP_dst[4] = '\0';
+
+
     return (package){.header_pointer = ip_pointer,
                      .package_size = ip_packet_size,
                      .type = ((struct ip *)ip_pointer)->ip_p,
@@ -42,6 +61,7 @@ package link_dissector(package ethernet_packet, FILE* fout) {
 package network_dissector(package packet, FILE* fout) {
 
   struct ip const *ip = (struct ip *)packet.header_pointer;
+
   int ip_header_size = ip->ip_hl * 4;
   int ip_total_len = (htons)(ip->ip_len);
 

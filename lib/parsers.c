@@ -7,12 +7,6 @@ parsed_packet pkt_parser(const package packet, const package segment,
   const struct ip *ip_header = (struct ip *)packet.header_pointer;
   pkt.ip_header = (*ip_header);
 
-  // // print IP addresses */
-  // pkt.src_ip = ip_header->ip_src;
-  // pkt.dst_ip = ip_header->ip_dst;
-  // LOG_SCR("Source IP: %s\n", inet_ntoa((*pkt).src_ip)); */
-  // LOG_SCR("Destination IP: %s\n", inet_ntoa((*pkt).dst_ip)); */
-
   if (segment.type == IPPROTO_TCP) {
     tcp_parser(&pkt, segment, payload);
   } else if (segment.type == IPPROTO_UDP) {

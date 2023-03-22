@@ -26,6 +26,14 @@ void insert_new_flow(HashTable table, Node *const flow_node) {
 // insert a packet data to a flow
 void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
                     Node **flow_head, Node **flow_tail, FILE* stream) {
+  if (!(*flow_head)) {
+    *flow_head = malloc(sizeof(Node*));
+    *flow_tail = malloc(sizeof(Node*));
+    *flow_head = pkt_node;
+    *flow_tail = pkt_node;
+    LOG_DBG(stream, DBG_PARSER, "First node in list\n");
+    return;
+  }
   if (insert_type == DESC) {
     insert_node_desc(flow_head, pkt_node, stream);
   }

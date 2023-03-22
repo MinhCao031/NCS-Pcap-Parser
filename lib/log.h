@@ -20,6 +20,8 @@
 
 #pragma once
 
+#define PCAP_FILE "sample_FTP_1.pcap"
+
 /* These below are just for debug */
 #define DBG_ALL 1
 // 1 to calculate time, otherwise 0
@@ -27,7 +29,7 @@
 // 1 to print parser's process, otherwise 0
 #define DBG_PARSER (DBG_ALL & 1)
 // 1 to check and filter wrong sequences out, otherwise 0
-#define DBG_PKT_SEQ (DBG_ALL & 1)
+#define DBG_PKT_SEQ (DBG_ALL & 0)
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
@@ -37,7 +39,6 @@
 
 // ASC to insert packet in ascending sequence, otherwise DESC
 #define DATA_DIRECTION ASC
-#define PCAP_FILE "sample_SMTP_2.pcap"
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030
@@ -49,11 +50,24 @@
 #define FILELOG_1 "output_parse_packet.txt"
 #define FILELOG_2 "output_seq_filter.txt"
 #define FILELOG_3 "output_wireshark.txt"
-#define FILELOG_4 "output_others.txt"
 
-#define OUTPUT_1 (DBG_PARSER  ? fopen(FILELOG_1, "a+") : NULL)
-#define OUTPUT_2 (DBG_PKT_SEQ ? fopen(FILELOG_2, "a+") : NULL)
-#define OUTPUT_3 (DBG_FLOW    ? fopen(FILELOG_3, "a+") : NULL)
+#if DBG_PARSER == 1
+#define OUTPUT_1 fopen(FILELOG_1, "a+")
+#else
+#define OUTPUT_1 NULL
+#endif
+
+#if DBG_PKT_SEQ == 1
+#define OUTPUT_2 fopen(FILELOG_2, "a+")
+#else
+#define OUTPUT_2 NULL
+#endif
+
+#if DBG_FLOW == 1
+#define OUTPUT_3 fopen(FILELOG_3, "a+")
+#else
+#define OUTPUT_3 NULL
+#endif
 
 #define HAS_FIN_FLAG (pkt.tcp.th_flags & TH_FIN)
 #define HAS_SYN_FLAG (pkt.tcp.th_flags & TH_SYN)
@@ -132,8 +146,9 @@
         {                                                                                                         \
             if (pkt.tcp.seq == flow->nxt_pkt_seq && pkt.tcp.ack_seq == flow->current_ack)                         \
             {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER, "TCP inserted with the same flow with the last packet\n"              \
-                                            "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                   \
+                LOG_DBG(stream, DBG_PARSER,                                                                       \
+                        "TCP inserted with the same flow with the last packet\n"                                  \
+                        "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                                       \
                         flow->nxt_pkt_seq, pkt.tcp.seq, flow->current_ack, pkt.tcp.ack_seq);                      \
                 Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
                 flow->current_seq = pkt.tcp.seq;                                                                  \
@@ -144,8 +159,9 @@
             }                                                                                                     \
             else                                                                                                  \
             {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER, "TCP not inserted with the same flow with the last packet\n"          \
-                                            "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                  \
+                LOG_DBG(stream, DBG_PARSER,                                                                       \
+                        "TCP not inserted with the same flow with the last packet\n"                              \
+                        "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                                      \
                         flow->nxt_pkt_seq, pkt.tcp.seq, flow->current_ack, pkt.tcp.ack_seq);                      \
             }                                                                                                     \
         }                                                                                                         \
@@ -153,8 +169,9 @@
         {                                                                                                         \
             if (pkt.tcp.seq == flow->current_ack && pkt.tcp.ack_seq == flow->nxt_pkt_seq)                         \
             {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER, "TCP inserted with the opposite flow with the last packet\n"          \
-                                            "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                   \
+                LOG_DBG(stream, DBG_PARSER,                                                                       \
+                        "TCP inserted with the opposite flow with the last packet\n"                              \
+                        "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                                       \
                         flow->current_ack, pkt.tcp.seq, flow->nxt_pkt_seq, pkt.tcp.ack_seq);                      \
                 Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
                 flow->current_ack = flow->nxt_pkt_seq;                                                            \
@@ -167,8 +184,9 @@
             }                                                                                                     \
             else                                                                                                  \
             {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER, "TCP not inserted with the opposite flow with the last packet\n"      \
-                                            "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                  \
+                LOG_DBG(stream, DBG_PARSER,                                                                       \
+                        "TCP not inserted with the opposite flow with the last packet\n"                          \
+                        "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                                      \
                         flow->current_ack, pkt.tcp.seq, flow->nxt_pkt_seq, pkt.tcp.ack_seq);                      \
             }                                                                                                     \
         }                                                                                                         \
