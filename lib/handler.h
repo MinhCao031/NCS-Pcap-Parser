@@ -39,9 +39,6 @@ void print_flows(Node const *const head, FILE* stream);
 // print all payloads in a flow
 void print_flow(flow_base_t flow, FILE* stream);
 
-// print all payloads in a merged flow
-void print_flow_merge(Node const *head, FILE* stream);
-
 // print payload from pointer of char with given size (to prevent stopping at '\0')
 void print_payload(u_char const *payload, int32_t payload_size, FILE* stream);
 
@@ -53,11 +50,10 @@ char* payload_to_string(Node* flow_direction, uint32_t len_need);
 
 /* Convert payload string to an array of printable characters, will convert:
  *
- * - Printable characters -> Keep
- *
- * - '\n', '\v', '\f', '\r' -> '\n'
- *
- * - '\t' -> ' '
+ * - Printable characters   -> Keep
+ * - '\t', '\n', '\r'       -> Keep
+ * - '\v', '\f'             -> '\n'
+ * - Others                 -> '.'
  */
 char* convert_payload(char* payload, uint32_t length);
 

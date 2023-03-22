@@ -12,14 +12,14 @@ typedef struct {
 typedef struct {
 
   // currently only used for IPv4
-  // struct in_addr src_ip;  
+  // struct in_addr src_ip;
   // struct in_addr dst_ip;
 
   // protocol
   // uint16_t protocol;
 
   struct ip ip_header;
-  
+
   union {
     struct tcphdr tcp;
     struct udphdr udp;
