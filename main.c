@@ -1,5 +1,6 @@
 #include "lib/handler.h"
 #include "lib/hash_table.h"
+#include "lib/parsers.h"
 #include <glib-2.0/glib.h>
 #include <pcap.h>
 #include <stdbool.h>
@@ -26,7 +27,6 @@ static const struct {
     {"XEXCH50", 7}        /* Microsoft Exchange */
 };
 #define NCOMMANDS (sizeof commands / sizeof commands[0])
-
 
 /*
  * A CMD is an SMTP command, MESSAGE is the message portion, and EOM is the
@@ -257,10 +257,10 @@ void smtp_decoder(u_char const *tvb, uint tvb_size,
   while (loffset < tvb_size) {
     linelen =
         payload_find_line_end(tvb, loffset, tvb_size - loffset, &next_offset);
-    /** printf( */
-    /**     "tvb_find_line_end: offset=%d,loffset=%d,next offset=%d,
-     * linelen=%d\n", */
-    /** offset, loffset, next_offset, linelen); */
+    /** printf("tvb_find_line_end: offset=%d,loffset=%d,next offset=%d,linelen =
+     * " */
+    /**        "%d\n ", */
+    /**        offset, loffset, next_offset, linelen); */
 
     if (linelen == -1) {
       if (offset == loffset) {
@@ -382,6 +382,7 @@ void smtp_decoder(u_char const *tvb, uint tvb_size,
         lineend = line + linelen;
         while (linep < lineend && *linep != ' ')
           linep++;
+
         cmdlen = (int)(linep - line);
         if (line_is_smtp_command(line, cmdlen)) {
           if (g_ascii_strncasecmp(line, "DATA", 4) == 0) {
@@ -476,12 +477,11 @@ void smtp_decoder(u_char const *tvb, uint tvb_size,
                   : SMTP_PDU_CMD;
         }
       }
-
-      /*
-       * Step past this line.
-       */
-      loffset = next_offset;
     }
+    /*
+     * Step past this line.
+     */
+    loffset = next_offset;
   }
   printf("payload: %s\n", tvb);
 }
@@ -500,9 +500,9 @@ void flow_browser(flow_base_t *flow) {
 
   while (temp != NULL) {
 
-	smtp_decoder(((parsed_payload *)temp->value)->data,
+    smtp_decoder(((parsed_payload *)temp->value)->data,
                  ((parsed_payload *)temp->value)->data_len, &session_state,
-				 true);
+                 ((parsed_payload *)temp->value)->is_up);
 
     printf("payload size: %d\n", ((parsed_payload *)temp->value)->data_len);
     temp = temp->next;

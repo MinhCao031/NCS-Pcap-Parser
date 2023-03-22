@@ -75,17 +75,6 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
       LOG_DBG(stream, DBG_PARSER, "Tracking seq = %u -> %u, ack = %u\n",
         new_flow.current_seq, new_flow.nxt_pkt_seq, new_flow.current_ack
       );
-      // struct timespec time_syn[10]; int time_point = 0;
-      // printf("Time of SYN =");
-      // for (int iii = 1; iii < 6; iii++)
-      //   printf("\t%lu", time_syn[iii].tv_nsec - time_syn[iii-1].tv_nsec);
-      // printf("\n");
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  0
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  1
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  2
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  3
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  4
-      //clock_gettime(CLOCK_REALTIME, &time_syn[time_point++]); //  5
     }
 
     // Insert to flow-down when it has SYN+ACK (Flag = 0x012)
