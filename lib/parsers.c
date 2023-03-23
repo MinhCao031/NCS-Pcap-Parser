@@ -1,5 +1,9 @@
 #include "parsers.h"
 
+uint32_t captured_packets = 0;
+uint32_t inserted_packets = 0;
+uint32_t filtered_packets = 0;
+
 parsed_packet pkt_parser(const package packet, const package segment,
                          const package payload) {
 
