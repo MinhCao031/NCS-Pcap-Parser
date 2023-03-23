@@ -96,10 +96,10 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     insert_packet(table, pkt, fout_parser);
     clock_gettime(CLOCK_REALTIME, &pkt_end);
 
-    printf(
-      "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", captured_packets,
-      pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
-    );
+    // printf(
+    //   "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", captured_packets,
+    //   pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
+    // );
 
     progress_pkt += 1;
     PROCESS_PACKET_TIME(50000);
@@ -126,12 +126,12 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
   // Test a random flow
   // printf("\nTest 01: Get a random flow\n");
 
-  // flow_base_t* flow_test = search_flow(table, 6813568831684183325, stdout);
+  // flow_base_t* flow_test = search_flow(table, 6359988029046827285, stdout);
   // if (flow_test) {
   //   print_flow(*flow_test, stdout);
   //   printf("\nTest 02: Get payloads in flow\n");
-  //   // char* long_payload = payload_to_string(flow_test->head_flow, flow_test->total_payload);
-  //   // printf("All payload in this flow:\n%s\n\n<END OF FLOW>\n", long_payload);
+  //   char* long_payload = payload_to_string(flow_test->head_flow, flow_test->total_payload);
+  //   printf("All payload in this flow:\n%s\n\n<END OF FLOW>\n", long_payload);
   // } else printf("Flow not found.\n");
 
   LOG_DBG(fout_list_flow, DBG_FLOW,
@@ -141,7 +141,7 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
   );
 
   printf("\nTest 03: Freeing...\n");
-  // free_hash_table(table);
+  free_hash_table(table);
 }
 
 

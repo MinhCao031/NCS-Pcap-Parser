@@ -27,8 +27,7 @@ HashTable create_hash_table(size_t size);
 void insert_new_flow(HashTable table, Node *const flow_node);
 
 // Insert a packet into a flow
-void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
-                    Node **flow_direction, Node **tail, FILE* stream);
+void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_base_t* flow_ptr, FILE* stream);
 
 // search for a flow with the given key
 flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream);

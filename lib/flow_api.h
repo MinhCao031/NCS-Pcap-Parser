@@ -68,7 +68,8 @@ typedef struct __flow_base_s {
   // Tail of the flow
   Node *tail_flow;
 
-
+  // Total payload of the flow
+  uint64_t flow_key;
 
 } flow_base_t;
 
