@@ -24,30 +24,32 @@ void insert_new_flow(HashTable table, Node *const flow_node) {
 }
 
 // insert a packet data to a flow
-void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
-                    Node **flow_head, Node **flow_tail, FILE* stream) {
-  if (!(*flow_head)) {
-    *flow_head = malloc(sizeof(Node*));
-    *flow_tail = malloc(sizeof(Node*));
-    *flow_head = pkt_node;
-    *flow_tail = pkt_node;
+void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_base_t* flow, FILE* stream) {
+  if (!flow) return;
+
+  if (!(flow->head_flow)) {
+    flow->head_flow = malloc(sizeof(Node*));
+    flow->head_flow = pkt_node;
+    flow->tail_flow = malloc(sizeof(Node*));
+    flow->tail_flow = pkt_node;
     LOG_DBG(stream, DBG_PARSER, "First node in list\n");
     return;
   }
+
   if (insert_type == DESC) {
-    insert_node_desc(flow_head, pkt_node, stream);
+    insert_node_desc(&(flow->head_flow), pkt_node, stream);
   }
 
   if (insert_type == ASC) {
-    insert_node_asc(flow_head, pkt_node, stream);
+    insert_node_asc(&(flow->head_flow), pkt_node, stream);
   }
 
   if (insert_type == FIRST) {
-    insert_first_node(flow_head, pkt_node);
+    insert_first_node(&(flow->head_flow), pkt_node);
   }
 
   if (insert_type == LAST) {
-    insert_last_node(flow_head, flow_tail, pkt_node, stream);
+    insert_last_node(&(flow->head_flow), &(flow->tail_flow), pkt_node, stream);
   }
 }
 
@@ -108,10 +110,7 @@ void free_hash_table(HashTable table) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
-        free_payload_node(((flow_base_t *)tmp->value)->tail_flow);
         free_flow_direction(((flow_base_t *)tmp->value)->head_flow);
-        // free_flow_direction(((flow_base_t *)tmp->value)->flow_down);
-        // free_flow_direction(((flow_base_t *)tmp->value)->flow_up);
         flow_temp = flow_temp->next;
       }
     }

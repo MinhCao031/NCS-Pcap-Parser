@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "sample_ERR_0.pcap"
+#define PCAP_FILE "sample_TCP_1.pcap"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -33,7 +33,7 @@
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
+#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 1)
 // 1 to print to console, otherwise 0
 #define DBG_CONSOLE (DBG_ALL & 1)
 
@@ -133,25 +133,25 @@
     }
 
 // Try to insert to flow
-#define TRY_INSERT_FLOW                                                                                       \
-    do                                                                                                        \
-    {                                                                                                         \
-        uint8_t direction = is_packet_up(flow, pkt);                                                          \
-        if (pkt.tcp.seq == flow->next_seq[direction])                                                         \
-        {                                                                                                     \
-            LOG_DBG(stream, DBG_PARSER, "TCP inserted\nComparing get True: SEQ(%u & %u)\n",                   \
-                    pkt.tcp.seq, flow->next_seq[direction]);                                                  \
-            Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
-            flow->next_seq[direction] = pkt.tcp.seq + pkt.payload.data_len;                                   \
-            insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); \
-            inserted_packets += 1;                                                                            \
-            flow->total_payload += pkt.payload.data_len;                                                      \
-        }                                                                                                     \
-        else                                                                                                  \
-        {                                                                                                     \
-            LOG_DBG(stream, DBG_PARSER, "TCP not inserted\nComparing get False: SEQ(%u & %u)\n",              \
-                    pkt.tcp.seq, flow->next_seq[direction]);                                                  \
-        }                                                                                                     \
+#define TRY_INSERT_FLOW                                                                          \
+    do                                                                                           \
+    {                                                                                            \
+        uint8_t direction = is_packet_up(flow, pkt);                                             \
+        if (pkt.tcp.seq == flow->next_seq[direction])                                            \
+        {                                                                                        \
+            LOG_DBG(stream, DBG_PARSER, "TCP inserted\nComparing get True: SEQ(%u & %u)\n",      \
+                    pkt.tcp.seq, flow->next_seq[direction]);                                     \
+            Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));              \
+            flow->next_seq[direction] = pkt.tcp.seq + pkt.payload.data_len;                      \
+            insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, flow, stream);                      \
+            inserted_packets += 1;                                                               \
+            flow->total_payload += pkt.payload.data_len;                                         \
+        }                                                                                        \
+        else                                                                                     \
+        {                                                                                        \
+            LOG_DBG(stream, DBG_PARSER, "TCP not inserted\nComparing get False: SEQ(%u & %u)\n", \
+                    pkt.tcp.seq, flow->next_seq[direction]);                                     \
+        }                                                                                        \
     } while (0)
 
 #endif /*LOG_H*/

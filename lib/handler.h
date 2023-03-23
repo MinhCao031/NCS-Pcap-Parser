@@ -22,10 +22,10 @@ bool is_packet_up(flow_base_t const *flow, parsed_packet pkt);
 void insert_packet(HashTable table, parsed_packet pkt, FILE* stream);
 
 // insert tcp packet to flow
-void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream);
+void insert_tcp_pkt(HashTable table, parsed_packet pkt, FILE* stream);
 
 // insert udp packet to flow
-void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream);
+void insert_udp_pkt(HashTable table, parsed_packet pkt, FILE* stream);
 
 // iterate through all ID in hashtable to print
 void print_hashtable(HashTable const table, FILE* stream);

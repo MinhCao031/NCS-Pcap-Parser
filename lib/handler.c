@@ -10,29 +10,25 @@ uint64_t get_flow_key(uint64_t ip1, uint64_t ip2, uint64_t p1, uint64_t p2) {
 
 // classify and insert a new packet into hash table
 void insert_packet(HashTable table, parsed_packet pkt, FILE* stream) {
-
   LOG_DBG(stream, DBG_PARSER, "Try inserting packet...\n");
-  uint64_t flow_key;
 
   if (pkt.ip_header.ip_p == IPPROTO_TCP) {
-    flow_key = get_flow_key(pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.tcp.source, pkt.tcp.dest);
     LOG_DBG(stream, DBG_PARSER,
       "IP Source: %u, IP Destination: %u\nPort Source: %u, Port Destination: %u\n"
       "TCP seq: %u, TCP length: %d, Try inserting TCP...\n", 
       pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.tcp.source, pkt.tcp.dest,
       pkt.tcp.seq, pkt.payload.data_len);
-    insert_tcp_pkt(table, flow_key, pkt, stream);
+    insert_tcp_pkt(table, pkt, stream);
     LOG_DBG(stream, DBG_PARSER, "Done inserting TCP\n");
   } 
   else if (pkt.ip_header.ip_p == IPPROTO_UDP) {
-    flow_key = get_flow_key(pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.udp.source, pkt.udp.dest);
     LOG_DBG(stream, DBG_PARSER,
       "IP Source: %u, IP Destination: %u\n"
       "Port Source: %u, Port Destination: %u\n"
       "UDP length: %d, Try inserting UDP...\n", 
       pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.udp.source, pkt.udp.dest, 
       pkt.payload.data_len);
-    insert_udp_pkt(table, flow_key, pkt, stream);
+    insert_udp_pkt(table, pkt, stream);
     LOG_DBG(stream, DBG_PARSER, "Done inserting UDP\n");
   } 
   else {
@@ -41,10 +37,10 @@ void insert_packet(HashTable table, parsed_packet pkt, FILE* stream) {
 }
 
 // insert tcp packet to flow
-void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream) {
+void insert_tcp_pkt(HashTable table, parsed_packet pkt, FILE* stream) {
+  uint64_t flow_key = get_flow_key(pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.tcp.source, pkt.tcp.dest);
   LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %lu...\n", flow_key);
   flow_base_t *flow = search_flow(table, flow_key, stream);
-  LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
   LOG_DBG(stream, flow && DBG_PARSER, "---BEFORE INSERTING---\n"
     "Checking first seq = %u & %u\nBEFORE BEFORE = %u\n",
@@ -134,10 +130,10 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
 }
 
 // insert udp packet to flow
-void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE* stream) {
+void insert_udp_pkt(HashTable table, parsed_packet pkt, FILE* stream) {
+  uint64_t flow_key = get_flow_key(pkt.ip_header.ip_src.s_addr, pkt.ip_header.ip_dst.s_addr, pkt.udp.source, pkt.udp.dest);
   LOG_DBG(stream, DBG_PARSER, "Finding flowkey = %lu...\n", flow_key);
   flow_base_t *flow = search_flow(table, flow_key, stream);
-  LOG_DBG(stream, DBG_PARSER, "Found flowkey\n");
 
   if (flow == NULL) {
     LOG_DBG(stream, DBG_PARSER, "UDP flow not found, creating new one\n");
@@ -145,7 +141,7 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
     flow_base_t new_flow = create_flow(pkt, stream);
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP to flow...\n");
-    insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(new_flow.head_flow), &(new_flow.tail_flow), stream); //*new*//
+    insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &new_flow, stream); //*new*//
 
     LOG_DBG(stream, DBG_PARSER, "Try inserting UDP flow to table...\n");
     insert_new_flow(table, create_flow_node(flow_key, new_flow, stream));
@@ -155,7 +151,7 @@ void insert_udp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt, FILE*
   } else {
     LOG_DBG(stream, DBG_PARSER, "Flow found, inserting UDP to flow...\n");
     Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));
-    insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); //*new*//
+    insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, flow, stream); //*new*//
     flow->total_payload += pkt.payload.data_len; //*new*//
 
     LOG_DBG(stream, DBG_PARSER, "Flow found, done inserting UDP\n");
@@ -275,16 +271,7 @@ void print_flows(Node const *const head, FILE* stream) {
 void print_flow(flow_base_t flow, FILE* stream) {
   Node const *temp = flow.head_flow;
   if (!temp) return;
-  // else if (flow.ip_proto == IPPROTO_TCP) {
-  //   temp = temp->next->next;
-  //   LOG_DBG(stream, DBG_FLOW, "Removing SYN...");
-  //   pop_first_node(&(flow.head_flow));
-  //   LOG_DBG(stream, DBG_FLOW, "Removed SYN...");
-  //   pop_first_node(&(flow.head_flow));
-  //   LOG_DBG(stream, DBG_FLOW, "Removed SYN/ACK...");
-  // }
 
-  // LOG_DBG(stream, DBG_FLOW, "\t|IP: %s <=> %s\n", inet_ntop(flow.sip), inet_ntop(flow.dip));
   // print ip addresses
   LOG_DBG(stream, DBG_FLOW, "\t|IP: %s ", inet_ntoa(flow.sip));
   LOG_DBG(stream, DBG_FLOW, "<=> %s, ", inet_ntoa(flow.dip));
@@ -298,14 +285,10 @@ void print_flow(flow_base_t flow, FILE* stream) {
   LOG_DBG(stream, DBG_FLOW, "\t|Protocol: %s\n", flow.ip_proto == IPPROTO_TCP? "TCP": "UDP");
 
 
-  while (!(!temp)) {
+  while (temp) {
     if (!((parsed_payload *)temp->value)) {
       LOG_DBG(stream, DBG_FLOW, "\t\t[ERROR]\n");
       break;
-    } else if (((parsed_payload *)temp->value)->data_len == 65535) {
-      // LOG_DBG(stream, DBG_FLOW, "\t\t[Got in here?]\n");
-      inserted_packets -= 1;
-      filtered_packets += 1;
     } else {
       char const* direction = (((parsed_payload *)temp->value)->is_up? "[ UP ]": "[DOWN]");
       LOG_DBG(stream, DBG_FLOW, "\t\tp%-7u%s Seq: %10lu, data size: %4u\n",
@@ -323,11 +306,10 @@ void print_flow(flow_base_t flow, FILE* stream) {
 
 // print package payload data (avoid printing binary data)
 void print_payload(u_char const *payload, int32_t payload_size, FILE* stream) {
-
   if (payload_size < 1) {
     LOG_DBG(stream, DBG_PAYLOAD, "ERROR: payload size = %u\n", payload_size);
     return;
-  } 
+  }
   LOG_DBG(stream, DBG_PAYLOAD, "\n");
 
   int len = payload_size;
@@ -368,7 +350,6 @@ void print_payload(u_char const *payload, int32_t payload_size, FILE* stream) {
 
 // print package payload data (hex form)
 void print_hex_ascii_line(u_char const *const payload, int32_t len, int32_t offset, FILE* stream) {
-
   int gap;
   u_char const *ch;
 
@@ -387,23 +368,15 @@ void print_hex_ascii_line(u_char const *const payload, int32_t len, int32_t offs
   if (len < 8) LOG_DBG(stream, DBG_PAYLOAD, " ");
 
   /* fill hex gap with spaces if not full line */
-  if (len < 16) {
-    gap = 16 - len;
-    for (int i = 0; i < gap; i++) {
-      LOG_DBG(stream, DBG_PAYLOAD, "   ");
-    }
+  gap = 16 - len;
+  for (int i = -1; i < gap; i++) {
+    LOG_DBG(stream, DBG_PAYLOAD, "   ");
   }
-  LOG_DBG(stream, DBG_PAYLOAD, "   ");
 
   /* ascii (if printable) */
   ch = payload;
   for (int i = 0; i < len; i++) {
-    if (isprint(*ch)) {
-      LOG_DBG(stream, DBG_PAYLOAD, "%c", *ch);
-    } 
-    else {
-      LOG_DBG(stream, DBG_PAYLOAD, ".");
-    }
+    LOG_DBG(stream, DBG_PAYLOAD, "%c", (isprint(*ch)? *ch: '.'));
     ch++;
   }
   LOG_DBG(stream, DBG_PAYLOAD, "\n");
@@ -413,7 +386,6 @@ void print_hex_ascii_line(u_char const *const payload, int32_t len, int32_t offs
 // Append all payload into a string
 char* payload_to_string(Node* flow_direction, uint32_t len_need) {
   uint32_t len = get_list_size(flow_direction);
-  // uint32_t flen = (uint32_t)(((parsed_payload *)(flow_direction->value))->data_len);
 
   // LOG_SCR("Length needed: %u", len_need);
   char* ans = (char*)malloc((2 + len_need) * sizeof(char));
@@ -439,7 +411,6 @@ char* payload_to_string(Node* flow_direction, uint32_t len_need) {
       if (need_separate) strcat(ans, "\t");
       strncat(ans, convert_payload(to_concat, data_length), data_length);
       iter_ans += data_length;
-      // *(ans + iter_ans) = "?";
       // LOG_SCR("Packet #%d/%d len %d assigned successfully!\n", i+1, len, data_length);
     } else {
       sprintf(ans, "%s", convert_payload(to_concat, data_length));
