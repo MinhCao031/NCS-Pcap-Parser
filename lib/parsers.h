@@ -3,7 +3,12 @@
 
 #include "dissection.h"
 
+extern uint32_t captured_packets;
+extern uint32_t inserted_packets;
+extern uint32_t filtered_packets;
+
 typedef struct {
+  uint32_t index;
   uint16_t data_len;
   uint16_t is_up;
   u_char const *data;
