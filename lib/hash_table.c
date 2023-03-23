@@ -108,7 +108,6 @@ void free_hash_table(HashTable table) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
-        free_payload_node(((flow_base_t *)tmp->value)->tail_flow);
         free_flow_direction(((flow_base_t *)tmp->value)->head_flow);
         // free_flow_direction(((flow_base_t *)tmp->value)->flow_down);
         // free_flow_direction(((flow_base_t *)tmp->value)->flow_up);

@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "sample_FTP_1.pcap"
+#define PCAP_FILE "sendFile.pcapng"
 
 /* These below are just for debug */
 #define DBG_ALL 1
