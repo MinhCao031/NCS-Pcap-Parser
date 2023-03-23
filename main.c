@@ -35,7 +35,6 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
   struct timespec pkt_start, pkt_end;
   uint64_t process_time = 0;
   uint64_t process_time_total = 0;
-  uint32_t packet_count = 0;
 
   // create hash table
   HashTable table = create_hash_table(HASH_TABLE_SIZE);
@@ -44,12 +43,12 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
 
     // Show the packet number & timestamp
     GET_FULL_TIMESTAMP;
-    packet_count++;
-    // printf("#%d\n", ++packet_count);
+    captured_packets++;
+    // printf("#%d\n", ++captured_packets);
 
     LOG_DBG(fout_parser, DBG_PARSER,
       "Packet # %i\nTime in sec & microsec: %lu.%7lu\nFull timestamp = %s\n",
-      packet_count, (header_pcap->ts).tv_sec, (header_pcap->ts).tv_usec, full_timestamp
+      captured_packets, (header_pcap->ts).tv_sec, (header_pcap->ts).tv_usec, full_timestamp
     );
 
     clock_gettime(CLOCK_REALTIME, &pkt_start);
@@ -97,17 +96,17 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     insert_packet(table, pkt, fout_parser);
     clock_gettime(CLOCK_REALTIME, &pkt_end);
 
-    // if (pkt.payload.data_len > 0) printf(
-    //   "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", packet_count,
-    //   pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
-    // );
+    printf(
+      "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", captured_packets,
+      pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
+    );
 
     progress_pkt += 1;
     PROCESS_PACKET_TIME(50000);
     LOG_DBG(fout_parser, DBG_PARSER,
       "----------------------------------------"
       "-----------Successfully---------------\n");
-    if (packet_count > LIMIT_PACKET) break;
+    if (captured_packets > LIMIT_PACKET) break;
     continue;
 
     END: {
@@ -115,7 +114,7 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
       LOG_DBG(fout_parser, DBG_PARSER,
         "----------------------------------------"
         "-----------PacketFailed---------------\n");
-      if (packet_count > LIMIT_PACKET) break;
+      if (captured_packets > LIMIT_PACKET) break;
     }
   }
 
@@ -138,9 +137,49 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
   LOG_DBG(fout_list_flow, DBG_FLOW,
     "Number of packets: %u\nNumber of flows: %u\n"
     "Number of inserted packets: %u\nNumber of filtered packets: %u\n",
-    packet_count, count_flows(table), inserted_packets, filtered_packets
+    captured_packets, count_flows(table), inserted_packets, filtered_packets
   );
 
   printf("\nTest 03: Freeing...\n");
   // free_hash_table(table);
 }
+
+
+/*
+
+
+Tracking #4   SEQ = 1436401060 => 1436401259, ACK = 2834331614 Tracking #4   SEQ = 1436401060 => 1436401259, ACK = 2834331614
+
+Tracking #5   SEQ = 2834331614 => 2834333074, ACK = 1436401259
+
+Tracking #6   SEQ = 2834333074 => 2834334534, ACK = 1436401259
+
+Tracking #8   SEQ = 2834334534 => 2834335594, ACK = 1436401259
+
+Tracking #9   SEQ = 1436401259 => 1436401385, ACK = 2834335594 Tracking #9   SEQ = 1436401259 => 1436401385, ACK = 2834335594
+
+Tracking #10  SEQ = 1436401385 => 1436401562, ACK = 2834335594 Tracking #10  SEQ = 1436401385 => 1436401562, ACK = 2834335594
+
+Tracking #11  SEQ = 1436401562 => 1436401847, ACK = 2834335594 Tracking #11  SEQ = 1436401562 => 1436401847, ACK = 2834335594
+
+Tracking #12  SEQ = 2834335594 => 2834335852, ACK = 1436401385
+
+Tracking #14  SEQ = 2834335852 => 2834335918, ACK = 1436401847
+
+Tracking #16  SEQ = 1436401847 => 1436401885, ACK = 2834335918 Tracking #16  SEQ = 1436401847 => 1436401885, ACK = 2834335918
+
+Tracking #17  SEQ = 2834335918 => 2834337378, ACK = 1436401847
+
+Tracking #18  SEQ = 2834337378 => 2834338235, ACK = 1436401847
+
+Tracking #21  SEQ = 1436401885 => 1436401931, ACK = 2834338235 Tracking #21  SEQ = 1436401885 => 1436401931, ACK = 2834338235
+
+Tracking #23  SEQ = 2834338235 => 2834338293, ACK = 1436401885
+
+Tracking #24  SEQ = 2834338293 => 2834338324, ACK = 1436401885
+
+Tracking #27  SEQ = 2834338235 => 2834338293, ACK = 1436401885
+
+Tracking #34  SEQ = 2834338235 => 2834338293, ACK = 1436401885
+
+*/

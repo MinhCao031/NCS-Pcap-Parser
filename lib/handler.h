@@ -3,9 +3,6 @@
 
 #include "hash_table.h"
 
-extern uint32_t inserted_packets;
-extern uint32_t filtered_packets;
-
 // get key from IPs & ports
 uint64_t get_flow_key(uint64_t x1, uint64_t x2, uint64_t y1, uint64_t y2);
 

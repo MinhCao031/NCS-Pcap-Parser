@@ -83,21 +83,15 @@
 
 // Format for printing debug info
 #define LOG_DBG(stream, print, format, others...) \
-    do                                            \
+    if (stream && print)                          \
     {                                             \
-        if (!stream || !(print))                  \
-            break;                                \
         fprintf(stream, format, ##others);        \
         fflush(stream);                           \
-    } while (0)
+    }
 
 #define LOG_SCR(format, others...) \
-    do                             \
-    {                              \
-        if (!DBG_CONSOLE)          \
-            break;                 \
-        printf(format, ##others);  \
-    } while (0)
+    if (DBG_CONSOLE)               \
+        printf(format, ##others);
 
 // Get full timestamp
 #define GET_FULL_TIMESTAMP                                  \
@@ -121,77 +115,43 @@
             sttstc[26] += 1;                                           \
         LOG_DBG(fout_parser, (process_time > time_limit_warning),      \
                 "Packet%8u:%7lu nanosec stoped at step %d of 6\n",     \
-                packet_count, process_time, progress_pkt);             \
+                captured_packets, process_time, progress_pkt);         \
     }
 
-#define STATISTIC_PACKET_TIME                                                                            \
-    if (DBG_TIMER)                                                                                       \
-    {                                                                                                    \
-        LOG_DBG(fout_parser, 1, "Packet time total: %lu\n", process_time_total);                         \
-        LOG_DBG(fout_parser, 1, "Average time process: %lf\n", 1.0 * process_time_total / packet_count); \
-        for (uint8_t i = 0; i < 8; i++)                                                                  \
-            LOG_DBG(fout_parser, 1, " =%-6u nanosec: %5u time(s)\n", (i + 3) * 100, sttstc[i]);          \
-        for (uint8_t i = 8; i < 17; i++)                                                                 \
-            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 6) * 1000, sttstc[i]);         \
-        for (uint8_t i = 17; i < 26; i++)                                                                \
-            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 15) * 10000, sttstc[i]);       \
-        LOG_DBG(fout_parser, 1, "> 100000 nanosec: %5u time(s)\n", sttstc[26]);                          \
+#define STATISTIC_PACKET_TIME                                                                                \
+    if (DBG_TIMER)                                                                                           \
+    {                                                                                                        \
+        LOG_DBG(fout_parser, 1, "Packet time total: %lu\n", process_time_total);                             \
+        LOG_DBG(fout_parser, 1, "Average time process: %lf\n", 1.0 * process_time_total / captured_packets); \
+        for (uint8_t i = 0; i < 8; i++)                                                                      \
+            LOG_DBG(fout_parser, 1, " =%-6u nanosec: %5u time(s)\n", (i + 3) * 100, sttstc[i]);              \
+        for (uint8_t i = 8; i < 17; i++)                                                                     \
+            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 6) * 1000, sttstc[i]);             \
+        for (uint8_t i = 17; i < 26; i++)                                                                    \
+            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 15) * 10000, sttstc[i]);           \
+        LOG_DBG(fout_parser, 1, "> 100000 nanosec: %5u time(s)\n", sttstc[26]);                              \
     }
 
 // Try to insert to flow
-#define TRY_INSERT_FLOW                                                                                           \
-    do                                                                                                            \
-    {                                                                                                             \
-        if (flow->is_last_pkt_up == is_packet_up(flow, pkt))                                                      \
-        {                                                                                                         \
-            if (pkt.tcp.seq == flow->nxt_pkt_seq && pkt.tcp.ack_seq == flow->current_ack)                         \
-            {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER,                                                                       \
-                        "TCP inserted with the same flow with the last packet\n"                                  \
-                        "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                                       \
-                        flow->nxt_pkt_seq, pkt.tcp.seq, flow->current_ack, pkt.tcp.ack_seq);                      \
-                Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
-                flow->current_seq = pkt.tcp.seq;                                                                  \
-                flow->nxt_pkt_seq = pkt.tcp.seq + pkt.payload.data_len;                                           \
-                insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); \
-                inserted_packets += 1;                                                                            \
-                flow->total_payload += pkt.payload.data_len;                                                      \
-            }                                                                                                     \
-            else                                                                                                  \
-            {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER,                                                                       \
-                        "TCP not inserted with the same flow with the last packet\n"                              \
-                        "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                                      \
-                        flow->nxt_pkt_seq, pkt.tcp.seq, flow->current_ack, pkt.tcp.ack_seq);                      \
-            }                                                                                                     \
-        }                                                                                                         \
-        else                                                                                                      \
-        {                                                                                                         \
-            if (pkt.tcp.seq == flow->current_ack && pkt.tcp.ack_seq == flow->nxt_pkt_seq)                         \
-            {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER,                                                                       \
-                        "TCP inserted with the opposite flow with the last packet\n"                              \
-                        "Comparing get True: SEQ(%u & %u), ACK(%u & %u)\n",                                       \
-                        flow->current_ack, pkt.tcp.seq, flow->nxt_pkt_seq, pkt.tcp.ack_seq);                      \
-                Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
-                flow->current_ack = flow->nxt_pkt_seq;                                                            \
-                flow->current_seq = pkt.tcp.seq;                                                                  \
-                flow->nxt_pkt_seq = pkt.tcp.seq + pkt.payload.data_len;                                           \
-                flow->is_last_pkt_up = 1 - flow->is_last_pkt_up;                                                  \
-                insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); \
-                inserted_packets += 1;                                                                            \
-                flow->total_payload += pkt.payload.data_len;                                                      \
-            }                                                                                                     \
-            else                                                                                                  \
-            {                                                                                                     \
-                LOG_DBG(stream, DBG_PARSER,                                                                       \
-                        "TCP not inserted with the opposite flow with the last packet\n"                          \
-                        "Comparing get False: SEQ(%u & %u), ACK(%u & %u)\n",                                      \
-                        flow->current_ack, pkt.tcp.seq, flow->nxt_pkt_seq, pkt.tcp.ack_seq);                      \
-            }                                                                                                     \
-        }                                                                                                         \
-        LOG_DBG(stream, DBG_PARSER, "Tracking seq = %u -> %u, ack = %u\n",                                        \
-                flow->current_seq, flow->nxt_pkt_seq, flow->current_ack);                                         \
+#define TRY_INSERT_FLOW                                                                                       \
+    do                                                                                                        \
+    {                                                                                                         \
+        uint8_t direction = is_packet_up(flow, pkt);                                                          \
+        if (pkt.tcp.seq == flow->next_seq[direction])                                                         \
+        {                                                                                                     \
+            LOG_DBG(stream, DBG_PARSER, "TCP inserted\nComparing get True: SEQ(%u & %u)\n",                   \
+                    pkt.tcp.seq, flow->next_seq[direction]);                                                  \
+            Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));                           \
+            flow->next_seq[direction] = pkt.tcp.seq + pkt.payload.data_len;                                   \
+            insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, &(flow->head_flow), &(flow->tail_flow), stream); \
+            inserted_packets += 1;                                                                            \
+            flow->total_payload += pkt.payload.data_len;                                                      \
+        }                                                                                                     \
+        else                                                                                                  \
+        {                                                                                                     \
+            LOG_DBG(stream, DBG_PARSER, "TCP not inserted\nComparing get False: SEQ(%u & %u)\n",              \
+                    pkt.tcp.seq, flow->next_seq[direction]);                                                  \
+        }                                                                                                     \
     } while (0)
 
 #endif /*LOG_H*/
