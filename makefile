@@ -15,7 +15,7 @@ CSOURCES +=	lib/dissection.c lib/parsers.c lib/linked_list.c lib/hash_table.c li
 LINKLIBS +=	-lpcap -lm
 
 # Should be the last argument
-SOURCE = test
+SOURCE = main
 SOURCE_CODE += $(SOURCE).c
 OUTPFILE +=  $(SOURCE)
 
