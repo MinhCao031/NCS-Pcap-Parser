@@ -2,11 +2,32 @@
 #include "lib/log.h"
 #include "lib/parsers.h"
 #include <pcap.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <glib-2.0/glib.h>
+#include <wchar.h>
 
 static gboolean smtp_auth_parameter_decoding_enabled = FALSE;
+
+// struct store smtp info
+typedef struct {
+
+  guint8 *username;
+  guint8 *password;
+  guint8 *from;
+  guint8 *to;
+  guint8 *subject;
+  guint8 *content_type;
+  guint8 *content_transfer_encoding;
+  guint8 *content_disposition;
+  guint8 *content_id;
+  guint8 *content_description;
+  guint8 *content_length;
+  guint8 *content_version;
+  guint8 *content_filename;
+
+} Parsed_smtp;
 
 /*
  * See
@@ -71,6 +92,14 @@ typedef enum {
   SMTP_AUTH_STATE_FAILED   /* authentication failed, no decoding */
 } smtp_auth_state_t;
 
+typedef enum {
+  SMTP_MULTILINE_NONE,
+  SMTP_MULTILINE_START,
+  SMTP_MULTILINE_CONTINUE,
+  SMTP_MULTILINE_END
+
+} smtp_multiline_state_t;
+
 struct smtp_session_state {
   smtp_state_t smtp_state;      /* Current state */
   smtp_auth_state_t auth_state; /* Current authentication state */
@@ -83,6 +112,62 @@ struct smtp_session_state {
   uint32_t msg_tot_len;  /* Total length of BDAT message */
   bool msg_last;         /* Is this the last BDAT chunk */
 };
+
+// convert smtp state to string
+char *smtp_state_to_str(smtp_state_t state) {
+
+  switch (state) {
+  case SMTP_STATE_START:
+    return "START";
+  case SMTP_STATE_READING_CMDS:
+    return "READING_CMDS";
+  case SMTP_STATE_READING_DATA:
+    return "READING_DATA";
+  case SMTP_STATE_AWAITING_STARTTLS_RESPONSE:
+    return "AWAITING_STARTTLS_RESPONSE";
+  default:
+    return "UNKNOWN";
+  }
+}
+
+// convert smtp auth state to string
+char *smtp_auth_state_to_str(smtp_auth_state_t state) {
+
+  switch (state) {
+  case SMTP_AUTH_STATE_NONE:
+    return "NONE";
+  case SMTP_AUTH_STATE_START:
+    return "START";
+  case SMTP_AUTH_STATE_USERNAME_REQ:
+    return "USERNAME_REQ";
+  case SMTP_AUTH_STATE_USERNAME_RSP:
+    return "USERNAME_RSP";
+  case SMTP_AUTH_STATE_PASSWORD_REQ:
+    return "PASSWORD_REQ";
+  case SMTP_AUTH_STATE_PASSWORD_RSP:
+    return "PASSWORD_RSP";
+  case SMTP_AUTH_STATE_PLAIN_START_REQ:
+    return "PLAIN_START_REQ";
+  case SMTP_AUTH_STATE_PLAIN_CRED_REQ:
+    return "PLAIN_CRED_REQ";
+  case SMTP_AUTH_STATE_PLAIN_REQ:
+    return "PLAIN_REQ";
+  case SMTP_AUTH_STATE_PLAIN_RSP:
+    return "PLAIN_RSP";
+  case SMTP_AUTH_STATE_NTLM_REQ:
+    return "NTLM_REQ";
+  case SMTP_AUTH_STATE_NTLM_CHALLANGE:
+    return "NTLM_CHALLANGE";
+  case SMTP_AUTH_STATE_NTLM_RSP:
+    return "NTLM_RSP";
+  case SMTP_AUTH_STATE_SUCCESS:
+    return "SUCCESS";
+  case SMTP_AUTH_STATE_FAILED:
+    return "FAILED";
+  default:
+    return "UNKNOWN";
+  }
+}
 
 static gboolean line_is_smtp_command(const guchar *command, int commandlen) {
   size_t i;
@@ -221,8 +306,14 @@ gint tvb_strneql(const u_char *tvb, const gint offset, const gchar *str,
   }
 }
 int smtp_decoder(u_char const *tvb, gint tvb_size,
-                 struct smtp_session_state *session_state, gboolean request) {
+                 struct smtp_session_state *session_state, gboolean request,
+                 int packet_number) {
 
+  printf("[Packet %d] %s\n", packet_number,
+         request == 1 ? "Request" : "Response");
+
+  Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
+  ;
   struct smtp_proto_data *spd_frame_data;
   int offset = 0;
   const guchar *line, *linep, *lineend;
@@ -438,7 +529,7 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
             spd_frame_data->pdu_type = SMTP_PDU_CMD;
             session_state->smtp_state = SMTP_STATE_READING_CMDS;
             session_state->auth_state = SMTP_AUTH_STATE_START;
-            printf("AUTH LOGIN command seen\n");
+            printf("    AUTH LOGIN command seen\n");
           } else if ((g_ascii_strncasecmp(line, "AUTH LOGIN", 10) == 0) &&
                      (linelen > 11)) {
             /*
@@ -455,8 +546,10 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
           }
         } else if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
           session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
+          printf("\tUsername: %s", line);
         } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_REQ) {
           session_state->auth_state = SMTP_AUTH_STATE_PASSWORD_RSP;
+          printf("\tPassword: %s", line);
         } else if (session_state->auth_state == SMTP_AUTH_STATE_PLAIN_REQ) {
           session_state->auth_state = SMTP_AUTH_STATE_PLAIN_RSP;
         } else if (session_state->auth_state ==
@@ -474,12 +567,177 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
                   : SMTP_PDU_CMD;
         }
       }
+
+      printf("\tSMTP state: %s\n\tAUTH state: %s\n",
+             smtp_state_to_str(session_state->smtp_state),
+             smtp_auth_state_to_str(session_state->auth_state));
     }
 
     loffset = next_offset;
   }
 
+  if (request) {
+
+    /** Check out whether or not we can see a command in there ... */
+    /** What we are looking for is not data_seen and the word DATA */
+    /** and not eom_seen. */
+    /**  */
+    /** We will see DATA and session_state->data_seen when we process the */
+    /** tree view after we have seen a DATA packet when processing */
+    /** the packet list pane. */
+    /**  */
+    /** On the first pass, we will not have any info on the packets */
+    /** On second and subsequent passes, we will. */
+
+    switch (spd_frame_data->pdu_type) {
+    case SMTP_PDU_MESSAGE:
+      length_remaining = tvb_size - offset;
+      if (true) {
+      }
+      break;
+    case SMTP_PDU_EOM:
+      break;
+    case SMTP_PDU_CMD:
+
+      /** Command. */
+      /**  */
+      /** XXX - what about stuff after the first line? */
+      /** Unlikely, as the client should wait for a response to the */
+      /** previous command before sending another request, but we */
+      /** should probably handle it. */
+
+      loffset = offset;
+      while (loffset < tvb_size) {
+
+        /** Find the end of the line. */
+
+        linelen = payload_find_line_end(tvb, loffset, tvb_size - loffset,
+                                        &next_offset);
+
+        if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
+
+          // copy decrypt to session_state->username
+          smtp_info->username = (guint8 *)g_malloc(linelen + 1);
+          memcpy(smtp_info->username, tvb, linelen);
+        } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_REQ) {
+
+          // copy decrypt to session_state->password
+          smtp_info->password = (guint8 *)g_malloc(linelen + 1);
+          memcpy(smtp_info->password, tvb, linelen);
+        }
+
+        loffset = next_offset;
+      }
+    }
+  } else {
+    // Multiline information
+    smtp_multiline_state_t multiline_state = SMTP_MULTILINE_NONE;
+    guint32 multiline_code = 0;
+
+    while (offset < tvb_size) {
+      // Find the end of the line.
+      linelen =
+          payload_find_line_end(tvb, offset, tvb_size - offset, &next_offset);
+      /** printf("linelen: %d\n", linelen); */
+
+      if (linelen >= 3) {
+        line_code[0] = *(tvb + offset);
+        line_code[1] = *(tvb + offset + 1);
+        line_code[2] = *(tvb + offset + 2);
+
+        if (g_ascii_isdigit(line_code[0]) && g_ascii_isdigit(line_code[1]) &&
+            g_ascii_isdigit(line_code[2])) {
+
+          code = (line_code[0] - '0') * 100 + (line_code[1] - '0') * 10 +
+                 (line_code[2] - '0');
+          printf("    Code: %d\n", code);
+          if ((linelen > 3) && (*(tvb + offset + 3) == '-')) {
+            if (multiline_state == SMTP_MULTILINE_NONE) {
+              multiline_state = SMTP_MULTILINE_START;
+              multiline_code = code;
+            } else {
+              multiline_state = SMTP_MULTILINE_CONTINUE;
+            }
+          } else if ((multiline_state == SMTP_MULTILINE_START) ||
+                     (multiline_state == SMTP_MULTILINE_CONTINUE)) {
+            multiline_state = SMTP_MULTILINE_END;
+          }
+
+          /** If we're awaiting the response to a STARTTLS code, this */
+          /** is it - if it's 220, all subsequent traffic will */
+          /** be TLS, otherwise we're back to boring old SMTP. */
+
+          if (session_state->smtp_state ==
+              SMTP_STATE_AWAITING_STARTTLS_RESPONSE) {
+            if (code == 220) {
+              /* This is the last non-TLS frame. */
+              /** ssl_starttls_ack(tls_handle, pinfo, smtp_handle); */
+            }
+            session_state->smtp_state = SMTP_STATE_READING_CMDS;
+          }
+
+          if (code == 334) {
+            switch (session_state->auth_state) {
+            case SMTP_AUTH_STATE_START:
+              session_state->auth_state = SMTP_AUTH_STATE_USERNAME_REQ;
+              break;
+            case SMTP_AUTH_STATE_USERNAME_RSP:
+              session_state->auth_state = SMTP_AUTH_STATE_PASSWORD_REQ;
+              break;
+            case SMTP_AUTH_STATE_PLAIN_REQ:
+              session_state->auth_state = SMTP_AUTH_STATE_PLAIN_RSP;
+              break;
+            case SMTP_AUTH_STATE_PLAIN_START_REQ:
+              session_state->auth_state = SMTP_AUTH_STATE_PLAIN_REQ;
+              break;
+            case SMTP_AUTH_STATE_NTLM_REQ:
+              session_state->auth_state = SMTP_AUTH_STATE_NTLM_CHALLANGE;
+              break;
+            case SMTP_AUTH_STATE_NONE:
+            case SMTP_AUTH_STATE_USERNAME_REQ:
+            case SMTP_AUTH_STATE_PASSWORD_REQ:
+            case SMTP_AUTH_STATE_PASSWORD_RSP:
+            case SMTP_AUTH_STATE_PLAIN_RSP:
+            case SMTP_AUTH_STATE_PLAIN_CRED_REQ:
+            case SMTP_AUTH_STATE_NTLM_RSP:
+            case SMTP_AUTH_STATE_NTLM_CHALLANGE:
+            case SMTP_AUTH_STATE_SUCCESS:
+            case SMTP_AUTH_STATE_FAILED:
+              /* ignore */
+              break;
+            }
+          } else if ((session_state->auth_state ==
+                      SMTP_AUTH_STATE_PASSWORD_RSP) ||
+                     (session_state->auth_state == SMTP_AUTH_STATE_PLAIN_RSP) ||
+                     (session_state->auth_state == SMTP_AUTH_STATE_NTLM_RSP) ||
+                     (session_state->auth_state ==
+                      SMTP_AUTH_STATE_PLAIN_CRED_REQ)) {
+            if (code == 235) {
+              session_state->auth_state = SMTP_AUTH_STATE_SUCCESS;
+            } else {
+              session_state->auth_state = SMTP_AUTH_STATE_FAILED;
+            }
+          }
+
+          printf("\tSMTP state: %s\n\tAUTH state: %s\n",
+                 smtp_state_to_str(session_state->smtp_state),
+                 smtp_auth_state_to_str(session_state->auth_state));
+        }
+
+        // Clear multiline state if this is the last line
+        if (multiline_state == SMTP_MULTILINE_END)
+          multiline_state = SMTP_MULTILINE_NONE;
+      }
+
+      /*
+       * Step past this line.
+       */
+      offset = next_offset;
+    }
+  }
   printf("payload: %s\n", tvb);
+  printf(
+      "------------------------------------------------------------------\n");
   return 0;
 }
 
@@ -499,7 +757,8 @@ void flow_browser(flow_base_t *flow) {
 
     smtp_decoder(((parsed_payload *)temp->value)->data,
                  ((parsed_payload *)temp->value)->data_len, &session_state,
-                 ((parsed_payload *)temp->value)->is_up);
+                 ((parsed_payload *)temp->value)->is_up,
+                 ((parsed_payload *)temp->value)->index);
 
     temp = temp->next;
   }
