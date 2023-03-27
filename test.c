@@ -18,14 +18,9 @@ typedef struct {
   guint8 *from;
   guint8 *to;
   guint8 *subject;
-  guint8 *content_type;
-  guint8 *content_transfer_encoding;
-  guint8 *content_disposition;
-  guint8 *content_id;
-  guint8 *content_description;
-  guint8 *content_length;
-  guint8 *content_version;
-  guint8 *content_filename;
+
+  guint8 num_fragments;
+  GSList *fragments;
 
 } Parsed_smtp;
 
@@ -307,13 +302,11 @@ gint tvb_strneql(const u_char *tvb, const gint offset, const gchar *str,
 }
 int smtp_decoder(u_char const *tvb, gint tvb_size,
                  struct smtp_session_state *session_state, gboolean request,
-                 int packet_number) {
+                 int packet_number, Parsed_smtp *smtp_info) {
 
   printf("[Packet %d] %s\n", packet_number,
          request == 1 ? "Request" : "Response");
 
-  Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
-  ;
   struct smtp_proto_data *spd_frame_data;
   int offset = 0;
   const guchar *line, *linep, *lineend;
@@ -339,6 +332,7 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
      */
     spd_frame_data = malloc(sizeof(struct smtp_proto_data));
 
+    spd_frame_data->pdu_type = SMTP_PDU_CMD;
     spd_frame_data->more_frags = TRUE;
   }
 
@@ -543,6 +537,7 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
             /*
              * Regular command.
              */
+            spd_frame_data->pdu_type = SMTP_PDU_CMD;
           }
         } else if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
           session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
@@ -593,9 +588,13 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
     case SMTP_PDU_MESSAGE:
       length_remaining = tvb_size - offset;
       if (true) {
+        // add tvb to fragments list in smtp_info
+        smtp_info->fragments = g_slist_append(smtp_info->fragments, tvb);
+        smtp_info->num_fragments++;
       }
       break;
     case SMTP_PDU_EOM:
+      printf("\tEOM seen\n");
       break;
     case SMTP_PDU_CMD:
 
@@ -614,12 +613,12 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
         linelen = payload_find_line_end(tvb, loffset, tvb_size - loffset,
                                         &next_offset);
 
-        if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
+        if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_RSP) {
 
           // copy decrypt to session_state->username
           smtp_info->username = (guint8 *)g_malloc(linelen + 1);
           memcpy(smtp_info->username, tvb, linelen);
-        } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_REQ) {
+        } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_RSP) {
 
           // copy decrypt to session_state->password
           smtp_info->password = (guint8 *)g_malloc(linelen + 1);
@@ -735,7 +734,7 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
       offset = next_offset;
     }
   }
-  printf("payload: %s\n", tvb);
+  /** printf("payload: %s\n", tvb); */
   printf(
       "------------------------------------------------------------------\n");
   return 0;
@@ -751,6 +750,10 @@ void flow_browser(flow_base_t *flow) {
                                              .auth_state = SMTP_AUTH_STATE_NONE,
                                              .msg_last = true};
 
+  Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
+  smtp_info->num_fragments = 0;
+  smtp_info->fragments = NULL;
+
   Node const *temp = flow->head_flow;
 
   while (temp != NULL) {
@@ -758,9 +761,21 @@ void flow_browser(flow_base_t *flow) {
     smtp_decoder(((parsed_payload *)temp->value)->data,
                  ((parsed_payload *)temp->value)->data_len, &session_state,
                  ((parsed_payload *)temp->value)->is_up,
-                 ((parsed_payload *)temp->value)->index);
+                 ((parsed_payload *)temp->value)->index, smtp_info);
 
     temp = temp->next;
+  }
+
+  // print fragments
+  if (smtp_info->num_fragments > 0) {
+    printf("User: %s\n", smtp_info->username);
+    printf("Password: %s\n", smtp_info->password);
+    printf("Num Fragments: %d\n", smtp_info->num_fragments);
+    printf("Fragments:\n");
+    // print all fragments in smtp_info->fragments, note that this is GSList
+	for (GSList *temp = smtp_info->fragments; temp != NULL; temp = temp->next) {
+	  printf("\t%s\n", (char *)temp->data);
+	}
   }
 }
 
