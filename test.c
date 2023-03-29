@@ -1,745 +1,283 @@
 #include "lib/handler.h"
-#include "lib/log.h"
-#include "lib/parsers.h"
-#include <pcap.h>
-#include <stdio.h>
+
+#include "lib/dissect_smtp.h"
+#include "lib/ws/wsutil/str_util.h"
+
 #include <string.h>
 
-#include <glib-2.0/glib.h>
-#include <wchar.h>
+#define PNAME "Internet Message Format"
+#define PSNAME "IMF"
+#define PFNAME "imf"
 
-static gboolean smtp_auth_parameter_decoding_enabled = FALSE;
+static int proto_imf = -1;
 
-// struct store smtp info
-typedef struct {
+static int hf_imf_date = -1;
+static int hf_imf_from = -1;
+static int hf_imf_sender = -1;
+static int hf_imf_reply_to = -1;
+static int hf_imf_to = -1;
+static int hf_imf_cc = -1;
+static int hf_imf_bcc = -1;
+static int hf_imf_message_id = -1;
+static int hf_imf_in_reply_to = -1;
+static int hf_imf_references = -1;
+static int hf_imf_subject = -1;
+static int hf_imf_comments = -1;
+static int hf_imf_user_agent = -1;
+static int hf_imf_keywords = -1;
+static int hf_imf_resent_date = -1;
+static int hf_imf_resent_from = -1;
+static int hf_imf_resent_sender = -1;
+static int hf_imf_resent_to = -1;
+static int hf_imf_resent_cc = -1;
+static int hf_imf_resent_bcc = -1;
+static int hf_imf_resent_message_id = -1;
+static int hf_imf_return_path = -1;
+static int hf_imf_received = -1;
+static int hf_imf_content_type = -1;
+static int hf_imf_content_type_type = -1;
+static int hf_imf_content_type_parameters = -1;
+static int hf_imf_content_id = -1;
+static int hf_imf_content_transfer_encoding = -1;
+static int hf_imf_content_description = -1;
+static int hf_imf_mime_version = -1;
+static int hf_imf_thread_index = -1;
+static int hf_imf_ext_mailer = -1;
+static int hf_imf_ext_mimeole = -1;
+static int hf_imf_ext_tnef_correlator = -1;
+static int hf_imf_ext_expiry_date = -1;
+static int hf_imf_ext_uidl = -1;
+static int hf_imf_ext_authentication_warning = -1;
+static int hf_imf_ext_virus_scanned = -1;
+static int hf_imf_extension = -1;
+static int hf_imf_extension_type = -1;
+static int hf_imf_extension_value = -1;
 
-  guint8 *username;
-  guint8 *password;
-  guint8 *from;
-  guint8 *to;
-  guint8 *subject;
+/* RFC 2156 */
+static int hf_imf_autoforwarded = -1;
+static int hf_imf_autosubmitted = -1;
+static int hf_imf_x400_content_identifier = -1;
+static int hf_imf_content_language = -1;
+static int hf_imf_conversion = -1;
+static int hf_imf_conversion_with_loss = -1;
+static int hf_imf_delivery_date = -1;
+static int hf_imf_discarded_x400_ipms_extensions = -1;
+static int hf_imf_discarded_x400_mts_extensions = -1;
+static int hf_imf_dl_expansion_history = -1;
+static int hf_imf_deferred_delivery = -1;
+static int hf_imf_expires = -1;
+static int hf_imf_importance = -1;
+static int hf_imf_incomplete_copy = -1;
+static int hf_imf_latest_delivery_time = -1;
+static int hf_imf_message_type = -1;
+static int hf_imf_original_encoded_information_types = -1;
+static int hf_imf_originator_return_address = -1;
+static int hf_imf_priority = -1;
+static int hf_imf_reply_by = -1;
+static int hf_imf_sensitivity = -1;
+static int hf_imf_supersedes = -1;
+static int hf_imf_x400_content_type = -1;
+static int hf_imf_x400_mts_identifier = -1;
+static int hf_imf_x400_originator = -1;
+static int hf_imf_x400_received = -1;
+static int hf_imf_x400_recipients = -1;
 
-  guint8 num_fragments;
-  GSList *fragments;
+static int hf_imf_delivered_to = -1;
 
-} Parsed_smtp;
+static int hf_imf_message_text = -1;
 
-/*
- * See
- *
- *      http://support.microsoft.com/default.aspx?scid=kb;[LN];812455
- *
- * for the Exchange extensions.
- */
-static const struct {
-  const char *command;
-  int len;
-} commands[] = {
-    {"STARTTLS", 8},      /* RFC 2487 */
-    {"X-EXPS", 6},        /* Microsoft Exchange */
-    {"X-LINK2STATE", 12}, /* Microsoft Exchange */
-    {"XEXCH50", 7}        /* Microsoft Exchange */
+static int hf_imf_display_name = -1;
+static int hf_imf_address = -1;
+/* static int hf_imf_mailbox_list = -1; */
+static int hf_imf_mailbox_list_item = -1;
+/* static int hf_imf_address_list = -1; */
+static int hf_imf_address_list_item = -1;
+
+/* draft-zeilenga-email-seclabel-04 */
+static int hf_imf_siolabel = -1;
+static int hf_imf_siolabel_marking = -1;
+static int hf_imf_siolabel_fgcolor = -1;
+static int hf_imf_siolabel_bgcolor = -1;
+static int hf_imf_siolabel_type = -1;
+static int hf_imf_siolabel_label = -1;
+static int hf_imf_siolabel_unknown = -1;
+
+static int ett_imf = -1;
+static int ett_imf_content_type = -1;
+static int ett_imf_mailbox = -1;
+static int ett_imf_group = -1;
+static int ett_imf_mailbox_list = -1;
+static int ett_imf_address_list = -1;
+static int ett_imf_siolabel = -1;
+static int ett_imf_extension = -1;
+static int ett_imf_message_text = -1;
+
+#define NO_SUBDISSECTION NULL
+
+struct imf_field {
+  char *name; /* field name - in lower case for matching purposes */
+  int *hf_id; /* wireshark field */
+  void (*subdissector)();
+  gboolean add_to_col_info; /* add field to column info */
 };
-#define NCOMMANDS (sizeof commands / sizeof commands[0])
+static void dissect_imf_mailbox();
+static void dissect_imf_address();
+static void dissect_imf_address_list();
+static void dissect_imf_mailbox_list();
+static void dissect_imf_siolabel();
 
-/*
- * A CMD is an SMTP command, MESSAGE is the message portion, and EOM is the
- * last part of a message
- */
-#define SMTP_PDU_CMD 0
-#define SMTP_PDU_MESSAGE 1
-#define SMTP_PDU_EOM 2
-
-struct smtp_proto_data {
-  guint16 pdu_type;
-  guint16 conversation_id;
-  gboolean more_frags;
+static struct imf_field imf_fields[] = {
+    {"unknown-extension", &hf_imf_extension_type, NO_SUBDISSECTION,
+     FALSE},                                         /* unknown extension */
+    {"date", &hf_imf_date, NO_SUBDISSECTION, FALSE}, /* date-time */
+    {"from", &hf_imf_from, dissect_imf_mailbox_list, TRUE}, /* mailbox_list */
+    {"sender", &hf_imf_sender, dissect_imf_mailbox, FALSE}, /* mailbox */
+    {"reply-to", &hf_imf_reply_to, dissect_imf_address_list,
+     FALSE},                                               /* address_list */
+    {"to", &hf_imf_to, dissect_imf_address_list, FALSE},   /* address_list */
+    {"cc", &hf_imf_cc, dissect_imf_address_list, FALSE},   /* address_list */
+    {"bcc", &hf_imf_bcc, dissect_imf_address_list, FALSE}, /* address_list */
+    {"message-id", &hf_imf_message_id, NO_SUBDISSECTION, FALSE},   /* msg-id */
+    {"in-reply-to", &hf_imf_in_reply_to, NO_SUBDISSECTION, FALSE}, /* msg-id */
+    {"references", &hf_imf_references, NO_SUBDISSECTION, FALSE},   /* msg-id */
+    {"subject", &hf_imf_subject, NO_SUBDISSECTION, TRUE},    /* unstructured */
+    {"comments", &hf_imf_comments, NO_SUBDISSECTION, FALSE}, /* unstructured */
+    {"user-agent", &hf_imf_user_agent, NO_SUBDISSECTION,
+     FALSE},                                     /* unstructured */
+    {"keywords", &hf_imf_keywords, NULL, FALSE}, /* phrase_list */
+    {"resent-date", &hf_imf_resent_date, NO_SUBDISSECTION, FALSE},
+    {"resent-from", &hf_imf_resent_from, dissect_imf_mailbox_list, FALSE},
+    {"resent-sender", &hf_imf_resent_sender, dissect_imf_mailbox, FALSE},
+    {"resent-to", &hf_imf_resent_to, dissect_imf_address_list, FALSE},
+    {"resent-cc", &hf_imf_resent_cc, dissect_imf_address_list, FALSE},
+    {"resent-bcc", &hf_imf_resent_bcc, dissect_imf_address_list, FALSE},
+    {"resent-message-id", &hf_imf_resent_message_id, NO_SUBDISSECTION, FALSE},
+    {"return-path", &hf_imf_return_path, NULL, FALSE},
+    {"received", &hf_imf_received, NO_SUBDISSECTION, FALSE},
+    /* these are really multi-part - but we parse them anyway */
+    {"content-type", &hf_imf_content_type, NULL,
+     FALSE}, /* handled separately as a special case */
+    {"content-id", &hf_imf_content_id, NULL, FALSE},
+    {"content-description", &hf_imf_content_description, NULL, FALSE},
+    {"content-transfer-encoding", &hf_imf_content_transfer_encoding, NULL,
+     FALSE},
+    {"mime-version", &hf_imf_mime_version, NO_SUBDISSECTION, FALSE},
+    /* MIXER - RFC 2156 */
+    {"autoforwarded", &hf_imf_autoforwarded, NULL, FALSE},
+    {"autosubmitted", &hf_imf_autosubmitted, NULL, FALSE},
+    {"x400-content-identifier", &hf_imf_x400_content_identifier, NULL, FALSE},
+    {"content-language", &hf_imf_content_language, NULL, FALSE},
+    {"conversion", &hf_imf_conversion, NULL, FALSE},
+    {"conversion-with-loss", &hf_imf_conversion_with_loss, NULL, FALSE},
+    {"delivery-date", &hf_imf_delivery_date, NULL, FALSE},
+    {"discarded-x400-ipms-extensions", &hf_imf_discarded_x400_ipms_extensions,
+     NULL, FALSE},
+    {"discarded-x400-mts-extensions", &hf_imf_discarded_x400_mts_extensions,
+     NULL, FALSE},
+    {"dl-expansion-history", &hf_imf_dl_expansion_history, NULL, FALSE},
+    {"deferred-delivery", &hf_imf_deferred_delivery, NULL, FALSE},
+    {"expires", &hf_imf_expires, NULL, FALSE},
+    {"importance", &hf_imf_importance, NULL, FALSE},
+    {"incomplete-copy", &hf_imf_incomplete_copy, NULL, FALSE},
+    {"latest-delivery-time", &hf_imf_latest_delivery_time, NULL, FALSE},
+    {"message-type", &hf_imf_message_type, NULL, FALSE},
+    {"original-encoded-information-types",
+     &hf_imf_original_encoded_information_types, NULL, FALSE},
+    {"originator-return-address", &hf_imf_originator_return_address, NULL,
+     FALSE},
+    {"priority", &hf_imf_priority, NULL, FALSE},
+    {"reply-by", &hf_imf_reply_by, NULL, FALSE},
+    {"sensitivity", &hf_imf_sensitivity, NULL, FALSE},
+    {"supersedes", &hf_imf_supersedes, NULL, FALSE},
+    {"x400-content-type", &hf_imf_x400_content_type, NULL, FALSE},
+    {"x400-mts-identifier", &hf_imf_x400_mts_identifier, NULL, FALSE},
+    {"x400-originator", &hf_imf_x400_originator, NULL, FALSE},
+    {"x400-received", &hf_imf_x400_received, NULL, FALSE},
+    {"x400-recipients", &hf_imf_x400_recipients, NULL, FALSE},
+    /* delivery */
+    {"delivered-to", &hf_imf_delivered_to, dissect_imf_mailbox,
+     FALSE}, /* mailbox */
+    /* some others */
+    {"x-mailer", &hf_imf_ext_mailer, NO_SUBDISSECTION,
+     FALSE}, /* unstructured */
+    {"thread-index", &hf_imf_thread_index, NO_SUBDISSECTION,
+     FALSE}, /* unstructured */
+    {"x-mimeole", &hf_imf_ext_mimeole, NO_SUBDISSECTION,
+     FALSE}, /* unstructured */
+    {"expiry-date", &hf_imf_ext_expiry_date, NO_SUBDISSECTION,
+     FALSE}, /* unstructured */
+    {"x-ms-tnef-correlator", &hf_imf_ext_tnef_correlator, NO_SUBDISSECTION,
+     FALSE},                                               /* unstructured */
+    {"x-uidl", &hf_imf_ext_uidl, NO_SUBDISSECTION, FALSE}, /* unstructured */
+    {"x-authentication-warning", &hf_imf_ext_authentication_warning,
+     NO_SUBDISSECTION, FALSE}, /* unstructured */
+    {"x-virus-scanned", &hf_imf_ext_virus_scanned, NO_SUBDISSECTION,
+     FALSE}, /* unstructured */
+    {"sio-label", &hf_imf_siolabel, dissect_imf_siolabel,
+     FALSE}, /* sio-label */
+    {NULL, NULL, NULL, FALSE},
 };
 
-/*
- * State information stored with a conversation.
- */
-typedef enum {
-  SMTP_STATE_START,                     /* Start of SMTP conversion */
-  SMTP_STATE_READING_CMDS,              /* reading commands */
-  SMTP_STATE_READING_DATA,              /* reading message data */
-  SMTP_STATE_AWAITING_STARTTLS_RESPONSE /* sent STARTTLS, awaiting response */
-} smtp_state_t;
+static void dissect_imf_mailbox(){};
+static void dissect_imf_address(){};
+static void dissect_imf_address_list(){};
+static void dissect_imf_mailbox_list(){};
+static void dissect_imf_siolabel(){};
 
-typedef enum {
-  SMTP_AUTH_STATE_NONE,  /*  No authentication seen or used */
-  SMTP_AUTH_STATE_START, /* Authentication started, waiting for username */
-  SMTP_AUTH_STATE_USERNAME_REQ,    /* Received username request from server */
-  SMTP_AUTH_STATE_USERNAME_RSP,    /* Received username response from client */
-  SMTP_AUTH_STATE_PASSWORD_REQ,    /* Received password request from server */
-  SMTP_AUTH_STATE_PASSWORD_RSP,    /* Received password request from server */
-  SMTP_AUTH_STATE_PLAIN_START_REQ, /* Received AUTH PLAIN command from client*/
-  SMTP_AUTH_STATE_PLAIN_CRED_REQ, /* Received AUTH PLAIN command including creds
-                                     from client*/
-  SMTP_AUTH_STATE_PLAIN_REQ,      /* Received AUTH PLAIN request from server */
-  SMTP_AUTH_STATE_PLAIN_RSP,      /* Received AUTH PLAIN response from client */
-  SMTP_AUTH_STATE_NTLM_REQ, /* Received ntlm negotiate request from client */
-  SMTP_AUTH_STATE_NTLM_CHALLANGE, /* Received ntlm challange request from server
-                                   */
-  SMTP_AUTH_STATE_NTLM_RSP,       /* Received ntlm auth request from client */
-  SMTP_AUTH_STATE_SUCCESS, /* Password received, authentication successful,
-                              start decoding */
-  SMTP_AUTH_STATE_FAILED   /* authentication failed, no decoding */
-} smtp_auth_state_t;
-
-typedef enum {
-  SMTP_MULTILINE_NONE,
-  SMTP_MULTILINE_START,
-  SMTP_MULTILINE_CONTINUE,
-  SMTP_MULTILINE_END
-
-} smtp_multiline_state_t;
-
-struct smtp_session_state {
-  smtp_state_t smtp_state;      /* Current state */
-  smtp_auth_state_t auth_state; /* Current authentication state */
-  /* Values that need to be saved because state machine can't be used during
-   * tree dissection */
-  uint8_t *username;     /* The username in the authentication. */
-  bool crlf_seen;        /* Have we seen a CRLF on the end of a packet */
-  bool data_seen;        /* Have we seen a DATA command yet */
-  uint32_t msg_read_len; /* Length of BDAT message read so far */
-  uint32_t msg_tot_len;  /* Total length of BDAT message */
-  bool msg_last;         /* Is this the last BDAT chunk */
-};
-
-// convert smtp state to string
-char *smtp_state_to_str(smtp_state_t state) {
-
-  switch (state) {
-  case SMTP_STATE_START:
-    return "START";
-  case SMTP_STATE_READING_CMDS:
-    return "READING_CMDS";
-  case SMTP_STATE_READING_DATA:
-    return "READING_DATA";
-  case SMTP_STATE_AWAITING_STARTTLS_RESPONSE:
-    return "AWAITING_STARTTLS_RESPONSE";
-  default:
-    return "UNKNOWN";
-  }
-}
-
-// convert smtp auth state to string
-char *smtp_auth_state_to_str(smtp_auth_state_t state) {
-
-  switch (state) {
-  case SMTP_AUTH_STATE_NONE:
-    return "NONE";
-  case SMTP_AUTH_STATE_START:
-    return "START";
-  case SMTP_AUTH_STATE_USERNAME_REQ:
-    return "USERNAME_REQ";
-  case SMTP_AUTH_STATE_USERNAME_RSP:
-    return "USERNAME_RSP";
-  case SMTP_AUTH_STATE_PASSWORD_REQ:
-    return "PASSWORD_REQ";
-  case SMTP_AUTH_STATE_PASSWORD_RSP:
-    return "PASSWORD_RSP";
-  case SMTP_AUTH_STATE_PLAIN_START_REQ:
-    return "PLAIN_START_REQ";
-  case SMTP_AUTH_STATE_PLAIN_CRED_REQ:
-    return "PLAIN_CRED_REQ";
-  case SMTP_AUTH_STATE_PLAIN_REQ:
-    return "PLAIN_REQ";
-  case SMTP_AUTH_STATE_PLAIN_RSP:
-    return "PLAIN_RSP";
-  case SMTP_AUTH_STATE_NTLM_REQ:
-    return "NTLM_REQ";
-  case SMTP_AUTH_STATE_NTLM_CHALLANGE:
-    return "NTLM_CHALLANGE";
-  case SMTP_AUTH_STATE_NTLM_RSP:
-    return "NTLM_RSP";
-  case SMTP_AUTH_STATE_SUCCESS:
-    return "SUCCESS";
-  case SMTP_AUTH_STATE_FAILED:
-    return "FAILED";
-  default:
-    return "UNKNOWN";
-  }
-}
-
-static gboolean line_is_smtp_command(const guchar *command, int commandlen) {
-  size_t i;
-
-  /*
-   * To quote RFC 821, "Command codes are four alphabetic
-   * characters".
-   *
-   * However, there are some SMTP extensions that involve commands
-   * longer than 4 characters and/or that contain non-alphabetic
-   * characters; we treat them specially.
-   *
-   * XXX - should we just have a table of known commands?  Or would
-   * that fail to catch some extensions we don't know about?
-   */
-  if (commandlen == 4 && g_ascii_isalpha(command[0]) &&
-      g_ascii_isalpha(command[1]) && g_ascii_isalpha(command[2]) &&
-      g_ascii_isalpha(command[3])) {
-    /* standard 4-alphabetic command */
-    return TRUE;
-  }
-
-  /*
-   * Check the list of non-4-alphabetic commands.
-   */
-  for (i = 0; i < NCOMMANDS; i++) {
-    if (commandlen == commands[i].len &&
-        g_ascii_strncasecmp(command, commands[i].command, commands[i].len) == 0)
-      return TRUE;
-  }
-  return FALSE;
-}
-int length_eol(const u_char *payload, int len, int offset,
-               u_char *found_needle) {
+// find index if charactor in string
+static int tvb_find_char(const u_char *tvb, int start_offset, int max_length,
+                         char c) {
   int i;
-  for (i = offset; i < len + offset; i++) {
-    if (payload[i] == '\r' || payload[i] == '\n') {
-      *found_needle = payload[i];
+  for (i = start_offset; i < max_length; i++) {
+    if (tvb[i] == c) {
       return i;
     }
   }
   return -1;
 }
 
-int payload_find_line_end(const u_char *tvb, const int offset, int len,
-                          int *next_offset) {
-  int eob_offset;
-  int eol_offset;
-  int linelen;
-  u_char found_needle = 0;
-
-  eob_offset = offset + len;
-
-  /*
-   * Look either for a CR or an LF.
-   */
-  eol_offset = length_eol(tvb, len, offset, &found_needle);
-  /** printf("eol_offset: %d, len: %d\n", eol_offset, len); */
-  if (eol_offset == -1) {
-    /*
-     * No CR or LF - line is presumably continued in next packet.
-     */
-    /*
-     * Pretend the line runs to the end of the tvbuff.
-     */
-    linelen = eob_offset - offset;
-    if (next_offset)
-      *next_offset = eob_offset;
-  } else {
-    /*
-     * Find the number of bytes between the starting offset
-     * and the CR or LF.
-     */
-    linelen = eol_offset - offset;
-
-    /*
-     * Is it a CR?
-     */
-    if (found_needle == '\r') {
-      /*
-       * Yes - is it followed by an LF?
-       */
-      if (eol_offset + 1 >= eob_offset) {
-        /*
-         * Dunno - the next byte isn't in this
-         * tvbuff.
-         */
-      } else {
-        /*
-         * Well, we can at least look at the next
-         * byte.
-         */
-        if (*(tvb + eol_offset + 1) == '\n') {
-          /*
-           * It's an LF; skip over the CR.
-           */
-          eol_offset++;
-        }
-      }
-    }
-
-    /*
-     * Return the offset of the character after the last
-     * character in the line, skipping over the last character
-     * in the line terminator.
-     */
-    if (next_offset)
-      *next_offset = eol_offset + 1;
-  }
-  return linelen;
-}
-
-/*
- * Call strncmp after checking if enough chars left, returning 0 if
- * it returns 0 (meaning "equal") and -1 otherwise, otherwise return -1.
- */
-gint tvb_strneql(const u_char *tvb, const gint offset, const gchar *str,
-                 const size_t size) {
-  const guint8 *ptr;
-
-  ptr = tvb + offset;
-
-  if (ptr) {
-    int cmp = strncmp((const char *)ptr, str, size);
-
-    /*
-     * Return 0 if equal, -1 otherwise.
-     */
-    return (cmp == 0 ? 0 : -1);
-  } else {
-    /*
-     * Not enough characters in the tvbuff to match the
-     * string.
-     */
-    return -1;
-  }
-}
-int smtp_decoder(u_char const *tvb, gint tvb_size,
-                 struct smtp_session_state *session_state, gboolean request,
-                 int packet_number, Parsed_smtp *smtp_info) {
-
-  printf("[Packet %d] %s\n", packet_number,
-         request == 1 ? "Request" : "Response");
-
-  struct smtp_proto_data *spd_frame_data;
-  int offset = 0;
-  const guchar *line, *linep, *lineend;
-  guint32 code;
-  int linelen = 0;
-  gint length_remaining;
-  gboolean eom_seen = FALSE;
-  gint next_offset;
-  gint loffset = 0;
-  int cmdlen;
-  guint8 *decrypt = NULL;
-  gsize decrypt_len = 0;
+void dissect_imf(const u_char *tvb, size_t tvb_len) {
+  const guint8 *content_type_str = NULL;
+  char *content_encoding_str = NULL;
+  const guint8 *parameters = NULL;
+  int hf_id;
+  gint start_offset = 0;
+  gint value_offset = 0;
+  gint unknown_offset = 0;
+  gint end_offset = 0;
+  gint max_length;
+  gchar *key;
+  gboolean last_field = FALSE;
   u_char *next_tvb;
-  guint8 line_code[3];
+  struct imf_field *f_info;
 
-  if (tvb_size == 0) {
-    return 0;
-  }
-  if (request) {
+  max_length = tvb_len;
 
-    /*
-     * Create a frame data structure and attach it to the packet.
-     */
-    spd_frame_data = malloc(sizeof(struct smtp_proto_data));
+  while (!last_field) {
 
-    spd_frame_data->pdu_type = SMTP_PDU_CMD;
-    spd_frame_data->more_frags = TRUE;
-  }
+    // look for a colon first
+    end_offset = tvb_find_char(tvb, start_offset, max_length, ':');
+    printf("end_offset: %d\n", end_offset);
 
-  loffset = offset;
-  while (loffset < tvb_size) {
-    linelen =
-        payload_find_line_end(tvb, loffset, tvb_size - loffset, &next_offset);
-    /** printf( */
-    /**     "tvb_find_line_end: offset=%d,loffset=%d,next offset=%d,
-     * linelen=%d\n", */
-    /** offset, loffset, next_offset, linelen); */
-
-    if (linelen == -1) {
-      if (offset == loffset) {
-        /*
-         * We didn't find a line ending, and we're doing desegmentation;
-         * tell the TCP dissector where the data for this message starts
-         * in the data it handed us, and tell it we need more bytes
-         */
-        return tvb_size;
-      } else {
-        linelen = tvb_size - loffset;
-        next_offset = loffset + linelen;
-      }
-    }
-
-    /*
-     * Check whether or not this packet is an end of message packet
-     * We should look for CRLF.CRLF and they may be split.
-     * We have to keep in mind that we may see what we want on
-     * two passes through here ...
-     */
-    if (session_state->smtp_state == SMTP_STATE_READING_DATA) {
-      /*
-       * The order of these is important ... We want to avoid
-       * cases where there is a CRLF at the end of a packet and a
-       * .CRLF at the beginning of the same packet.
-       */
-      if ((session_state->crlf_seen &&
-           tvb_strneql(tvb, loffset, ".\r\n", 3) == 0) ||
-          tvb_strneql(tvb, loffset, "\r\n.\r\n", 5) == 0)
-        eom_seen = TRUE;
-
-      length_remaining = tvb_size - loffset;
-      if (tvb_strneql(tvb, loffset + length_remaining - 2, "\r\n", 2) == 0)
-        session_state->crlf_seen = TRUE;
-      else
-        session_state->crlf_seen = FALSE;
-    }
-
-    if (request) {
-
-      if (session_state->smtp_state == SMTP_STATE_READING_DATA) {
-        /*
-         * This is message data.
-         */
-        if (eom_seen) { /* Seen the EOM */
-          /*
-           * EOM.
-           * Everything that comes after it is commands.
-           */
-          spd_frame_data->pdu_type = SMTP_PDU_EOM;
-          session_state->smtp_state = SMTP_STATE_READING_CMDS;
-          break;
-        } else {
-          /*
-           * Message data with no EOM.
-           */
-          spd_frame_data->pdu_type = SMTP_PDU_MESSAGE;
-
-          if (session_state->msg_tot_len > 0) {
-            /*
-             * We are handling a BDAT message.
-             * Check if we have reached end of the data chunk.
-             */
-            session_state->msg_read_len += tvb - loffset;
-            /*
-             * Since we're grabbing the rest of the packet, update the
-             * offset accordingly
-             */
-            next_offset = tvb_size;
-
-            if (session_state->msg_read_len == session_state->msg_tot_len) {
-              /*
-               * We have reached end of BDAT data chunk.
-               * Everything that comes after this is commands.
-               */
-              session_state->smtp_state = SMTP_STATE_READING_CMDS;
-
-              if (session_state->msg_last) {
-                /*
-                 * We have found the LAST data chunk.
-                 * The message can now be reassembled.
-                 */
-                spd_frame_data->more_frags = FALSE;
-              }
-
-              break; /* no need to go through the remaining lines */
-            }
-          }
-        }
-      } else {
-        /*
-         * This is commands - unless the capture started in the
-         * middle of a session, and we're in the middle of data.
-         *
-         * Commands are not necessarily 4 characters; look
-         * for a space or the end of the line to see where
-         * the putative command ends.
-         */
-        if ((session_state->auth_state != SMTP_AUTH_STATE_NONE)) {
-          decrypt = (u_char *)g_memdup2(tvb, linelen);
-          if ((smtp_auth_parameter_decoding_enabled) && (strlen(decrypt) > 1) &&
-              (g_base64_decode_inplace(decrypt, &decrypt_len)) &&
-              (decrypt_len > 0)) {
-            decrypt[decrypt_len] = 0;
-            line = decrypt;
-            linelen = (int)decrypt_len;
-          } else {
-            line = tvb;
-            decrypt_len = linelen;
-          }
-        } else {
-          line = tvb;
-        }
-
-        /** line = tvb; */
-
-        linep = line;
-        lineend = line + linelen;
-        while (linep < lineend && *linep != ' ')
-          linep++;
-        cmdlen = (int)(linep - line);
-        if (line_is_smtp_command(line, cmdlen)) {
-          if (g_ascii_strncasecmp(line, "DATA", 4) == 0) {
-            /*
-             * DATA command.
-             * This is a command, but everything that comes after it,
-             * until an EOM, is data.
-             */
-            spd_frame_data->pdu_type = SMTP_PDU_CMD;
-            session_state->smtp_state = SMTP_STATE_READING_DATA;
-            session_state->data_seen = TRUE;
-            printf("DATA command seen\n");
-          } else if (g_ascii_strncasecmp(line, "BDAT", 4) == 0) {
-            /*
-             * BDAT command.
-             * This is a command, but everything that comes after it,
-             * until given length is received, is data.
-             */
-            guint32 msg_len;
-
-            msg_len = (guint32)strtoul(line + 5, NULL, 10);
-
-            spd_frame_data->pdu_type = SMTP_PDU_CMD;
-            session_state->data_seen = TRUE;
-            session_state->msg_tot_len += msg_len;
-
-            if (msg_len == 0) {
-              /* No data to read, next will be a command */
-              session_state->smtp_state = SMTP_STATE_READING_CMDS;
-            } else {
-              session_state->smtp_state = SMTP_STATE_READING_DATA;
-            }
-
-            if (g_ascii_strncasecmp(line + linelen - 4, "LAST", 4) == 0) {
-              /*
-               * This is the last data chunk.
-               */
-              session_state->msg_last = TRUE;
-
-              if (msg_len == 0) {
-                /*
-                 * No more data to expect.
-                 * The message can now be reassembled.
-                 */
-                spd_frame_data->more_frags = FALSE;
-              }
-            } else {
-              session_state->msg_last = FALSE;
-            }
-          } else if ((g_ascii_strncasecmp(line, "AUTH LOGIN", 10) == 0) &&
-                     (linelen <= 11)) {
-            /*
-             * AUTH LOGIN command.
-             * Username is in a separate frame
-             */
-            spd_frame_data->pdu_type = SMTP_PDU_CMD;
-            session_state->smtp_state = SMTP_STATE_READING_CMDS;
-            session_state->auth_state = SMTP_AUTH_STATE_START;
-            printf("    AUTH LOGIN command seen\n");
-          } else if ((g_ascii_strncasecmp(line, "AUTH LOGIN", 10) == 0) &&
-                     (linelen > 11)) {
-            /*
-             * AUTH LOGIN command.
-             * Username follows the 'AUTH LOGIN' string
-             */
-            spd_frame_data->pdu_type = SMTP_PDU_CMD;
-            session_state->smtp_state = SMTP_STATE_READING_CMDS;
-            session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
-          } else {
-            /*
-             * Regular command.
-             */
-            spd_frame_data->pdu_type = SMTP_PDU_CMD;
-          }
-        } else if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_REQ) {
-          session_state->auth_state = SMTP_AUTH_STATE_USERNAME_RSP;
-          printf("\tUsername: %s", line);
-        } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_REQ) {
-          session_state->auth_state = SMTP_AUTH_STATE_PASSWORD_RSP;
-          printf("\tPassword: %s", line);
-        } else if (session_state->auth_state == SMTP_AUTH_STATE_PLAIN_REQ) {
-          session_state->auth_state = SMTP_AUTH_STATE_PLAIN_RSP;
-        } else if (session_state->auth_state ==
-                   SMTP_AUTH_STATE_NTLM_CHALLANGE) {
-          session_state->auth_state = SMTP_AUTH_STATE_NTLM_RSP;
-        } else {
-
-          /*
-           * Assume it's message data.
-           */
-          spd_frame_data->pdu_type =
-              (session_state->data_seen ||
-               (session_state->smtp_state == SMTP_STATE_START))
-                  ? SMTP_PDU_MESSAGE
-                  : SMTP_PDU_CMD;
-        }
-      }
-
-      printf("\tSMTP state: %s\n\tAUTH state: %s\n",
-             smtp_state_to_str(session_state->smtp_state),
-             smtp_auth_state_to_str(session_state->auth_state));
-    }
-
-    loffset = next_offset;
-  }
-
-  if (request) {
-
-    /** Check out whether or not we can see a command in there ... */
-    /** What we are looking for is not data_seen and the word DATA */
-    /** and not eom_seen. */
-    /**  */
-    /** We will see DATA and session_state->data_seen when we process the */
-    /** tree view after we have seen a DATA packet when processing */
-    /** the packet list pane. */
-    /**  */
-    /** On the first pass, we will not have any info on the packets */
-    /** On second and subsequent passes, we will. */
-
-    switch (spd_frame_data->pdu_type) {
-    case SMTP_PDU_MESSAGE:
-      length_remaining = tvb_size - offset;
-      if (true) {
-        // add tvb to fragments list in smtp_info
-        smtp_info->fragments = g_slist_append(smtp_info->fragments, tvb);
-        smtp_info->num_fragments++;
-      }
+    if (end_offset == -1) {
+      // no colon found, so this is not a valid header
       break;
-    case SMTP_PDU_EOM:
-      printf("\tEOM seen\n");
-      break;
-    case SMTP_PDU_CMD:
+    } else {
+      key = g_strndup((const char *)tvb + start_offset,
+                      end_offset - start_offset);
 
-      /** Command. */
-      /**  */
-      /** XXX - what about stuff after the first line? */
-      /** Unlikely, as the client should wait for a response to the */
-      /** previous command before sending another request, but we */
-      /** should probably handle it. */
-
-      loffset = offset;
-      while (loffset < tvb_size) {
-
-        /** Find the end of the line. */
-
-        linelen = payload_find_line_end(tvb, loffset, tvb_size - loffset,
-                                        &next_offset);
-
-        if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_RSP) {
-
-          // copy decrypt to session_state->username
-          smtp_info->username = (guint8 *)g_malloc(linelen + 1);
-          memcpy(smtp_info->username, tvb, linelen);
-        } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_RSP) {
-
-          // copy decrypt to session_state->password
-          smtp_info->password = (guint8 *)g_malloc(linelen + 1);
-          memcpy(smtp_info->password, tvb, linelen);
-        }
-
-        loffset = next_offset;
-      }
+      
+      // convert to lower case
+      ascii_strdown_inplace(key);
+        
     }
-  } else {
-    // Multiline information
-    smtp_multiline_state_t multiline_state = SMTP_MULTILINE_NONE;
-    guint32 multiline_code = 0;
 
-    while (offset < tvb_size) {
-      // Find the end of the line.
-      linelen =
-          payload_find_line_end(tvb, offset, tvb_size - offset, &next_offset);
-      /** printf("linelen: %d\n", linelen); */
+    printf("Key: %s\n", key);
 
-      if (linelen >= 3) {
-        line_code[0] = *(tvb + offset);
-        line_code[1] = *(tvb + offset + 1);
-        line_code[2] = *(tvb + offset + 2);
-
-        if (g_ascii_isdigit(line_code[0]) && g_ascii_isdigit(line_code[1]) &&
-            g_ascii_isdigit(line_code[2])) {
-
-          code = (line_code[0] - '0') * 100 + (line_code[1] - '0') * 10 +
-                 (line_code[2] - '0');
-          printf("    Code: %d\n", code);
-          if ((linelen > 3) && (*(tvb + offset + 3) == '-')) {
-            if (multiline_state == SMTP_MULTILINE_NONE) {
-              multiline_state = SMTP_MULTILINE_START;
-              multiline_code = code;
-            } else {
-              multiline_state = SMTP_MULTILINE_CONTINUE;
-            }
-          } else if ((multiline_state == SMTP_MULTILINE_START) ||
-                     (multiline_state == SMTP_MULTILINE_CONTINUE)) {
-            multiline_state = SMTP_MULTILINE_END;
-          }
-
-          /** If we're awaiting the response to a STARTTLS code, this */
-          /** is it - if it's 220, all subsequent traffic will */
-          /** be TLS, otherwise we're back to boring old SMTP. */
-
-          if (session_state->smtp_state ==
-              SMTP_STATE_AWAITING_STARTTLS_RESPONSE) {
-            if (code == 220) {
-              /* This is the last non-TLS frame. */
-              /** ssl_starttls_ack(tls_handle, pinfo, smtp_handle); */
-            }
-            session_state->smtp_state = SMTP_STATE_READING_CMDS;
-          }
-
-          if (code == 334) {
-            switch (session_state->auth_state) {
-            case SMTP_AUTH_STATE_START:
-              session_state->auth_state = SMTP_AUTH_STATE_USERNAME_REQ;
-              break;
-            case SMTP_AUTH_STATE_USERNAME_RSP:
-              session_state->auth_state = SMTP_AUTH_STATE_PASSWORD_REQ;
-              break;
-            case SMTP_AUTH_STATE_PLAIN_REQ:
-              session_state->auth_state = SMTP_AUTH_STATE_PLAIN_RSP;
-              break;
-            case SMTP_AUTH_STATE_PLAIN_START_REQ:
-              session_state->auth_state = SMTP_AUTH_STATE_PLAIN_REQ;
-              break;
-            case SMTP_AUTH_STATE_NTLM_REQ:
-              session_state->auth_state = SMTP_AUTH_STATE_NTLM_CHALLANGE;
-              break;
-            case SMTP_AUTH_STATE_NONE:
-            case SMTP_AUTH_STATE_USERNAME_REQ:
-            case SMTP_AUTH_STATE_PASSWORD_REQ:
-            case SMTP_AUTH_STATE_PASSWORD_RSP:
-            case SMTP_AUTH_STATE_PLAIN_RSP:
-            case SMTP_AUTH_STATE_PLAIN_CRED_REQ:
-            case SMTP_AUTH_STATE_NTLM_RSP:
-            case SMTP_AUTH_STATE_NTLM_CHALLANGE:
-            case SMTP_AUTH_STATE_SUCCESS:
-            case SMTP_AUTH_STATE_FAILED:
-              /* ignore */
-              break;
-            }
-          } else if ((session_state->auth_state ==
-                      SMTP_AUTH_STATE_PASSWORD_RSP) ||
-                     (session_state->auth_state == SMTP_AUTH_STATE_PLAIN_RSP) ||
-                     (session_state->auth_state == SMTP_AUTH_STATE_NTLM_RSP) ||
-                     (session_state->auth_state ==
-                      SMTP_AUTH_STATE_PLAIN_CRED_REQ)) {
-            if (code == 235) {
-              session_state->auth_state = SMTP_AUTH_STATE_SUCCESS;
-            } else {
-              session_state->auth_state = SMTP_AUTH_STATE_FAILED;
-            }
-          }
-
-          printf("\tSMTP state: %s\n\tAUTH state: %s\n",
-                 smtp_state_to_str(session_state->smtp_state),
-                 smtp_auth_state_to_str(session_state->auth_state));
-        }
-
-        // Clear multiline state if this is the last line
-        if (multiline_state == SMTP_MULTILINE_END)
-          multiline_state = SMTP_MULTILINE_NONE;
-      }
-
-      /*
-       * Step past this line.
-       */
-      offset = next_offset;
-    }
+    last_field = TRUE;
+    start_offset = end_offset;
   }
-  /** printf("payload: %s\n", tvb); */
-  printf(
-      "------------------------------------------------------------------\n");
-  return 0;
 }
-
 void flow_browser(flow_base_t *flow) {
 
   if (flow == NULL) {
@@ -753,6 +291,7 @@ void flow_browser(flow_base_t *flow) {
   Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
   smtp_info->num_fragments = 0;
   smtp_info->fragments = NULL;
+  smtp_info->defragment_size = 0;
 
   Node const *temp = flow->head_flow;
 
@@ -766,17 +305,35 @@ void flow_browser(flow_base_t *flow) {
     temp = temp->next;
   }
 
+  u_char *defragment = NULL;
   // print fragments
   if (smtp_info->num_fragments > 0) {
-    printf("User: %s\n", smtp_info->username);
-    printf("Password: %s\n", smtp_info->password);
-    printf("Num Fragments: %d\n", smtp_info->num_fragments);
-    printf("Fragments:\n");
-    // print all fragments in smtp_info->fragments, note that this is GSList
-	for (GSList *temp = smtp_info->fragments; temp != NULL; temp = temp->next) {
-	  printf("\t%s\n", (char *)temp->data);
-	}
+    // printf("User: %s\n", smtp_info->username);
+    // printf("Password: %s\n", smtp_info->password);
+    // printf("Num Fragments: %d\n", smtp_info->num_fragments);
+    // printf("Content length: %ld\n", smtp_info->defragment_size);
+    // printf("Fragments:\n");
+
+    // // print all fragments in smtp_info->fragments, note that this is GSList
+    // for (GSList *temp = smtp_info->fragments; temp != NULL; temp =
+    // temp->next) {
+    //   printf("%s\n", (char *)temp->data);
+    // }
+
+    // merge all fragments in smtp_info->fragments to one string
+    defragment = g_malloc(smtp_info->defragment_size + 1);
+    size_t offset = 0;
+    for (GSList *temp = smtp_info->fragments; temp != NULL; temp = temp->next) {
+      memcpy(defragment + offset, temp->data, strlen(temp->data));
+      offset += strlen(temp->data);
+    }
+    defragment[smtp_info->defragment_size] = '\0';
+
+    // print defragment
+    // printf("%s\n", defragment);
   }
+
+  dissect_imf(defragment, smtp_info->defragment_size);
 }
 
 void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
@@ -880,17 +437,8 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
   }
   }
 
-  // Print HashTable
-  print_hashtable(table, fout_list_flow);
-
   flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
   flow_browser(flow_test);
-
-  LOG_DBG(fout_list_flow, DBG_FLOW,
-          "Number of packets: %u\nNumber of flows: %u\n"
-          "Number of inserted packets: %u\nNumber of filtered packets: %u\n",
-          captured_packets, count_flows(table), inserted_packets,
-          filtered_packets);
 
   printf("\nFreeing...\n");
   free_hash_table(table);

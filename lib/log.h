@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "sendFile.pcapng"
+#define PCAP_FILE "data/sendFile.pcapng"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -40,7 +40,7 @@
 // ASC to insert packet in ascending sequence, otherwise DESC
 #define DATA_DIRECTION ASC
 #define SEC2NANO 1000000000
-#define LIMIT_PACKET 2700000
+#define LIMIT_PACKET 27
 #define HASH_TABLE_SIZE 30030
 
 // If a sequence is too far from the previous one, that packet is consider ignored
