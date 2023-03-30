@@ -4,7 +4,7 @@
 #include "parsers.h"
 
 typedef struct Node {
-  uint64_t key;
+  uint64_t key; // Absolute sequence
   void *value;
   struct Node *next;
 } Node;
@@ -13,6 +13,8 @@ typedef struct Node {
 void insert_node_desc(Node **head, Node *const new_node, FILE* stream);
 // insert node by order asc (key) in the list
 void insert_node_asc(Node **head, Node *const node, FILE* stream);
+// insert node by order asc (key) in the list
+void insert_payload_asc(Node **head, Node **tail, Node *const node, FILE* stream);
 // insert end of list
 void insert_last_node(Node **head, Node **tail, Node *const node, FILE* stream);
 // insert head of list

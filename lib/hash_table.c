@@ -26,32 +26,44 @@ void insert_new_flow(HashTable table, Node *const flow_node) {
 // insert a packet data to a flow
 void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_base_t* flow, FILE* stream) {
   if (!flow) return;
+  uint8_t is_up = ((parsed_payload*)(pkt_node->value))->is_up;
 
   if (!(flow->head_flow)) {
     flow->head_flow = malloc(sizeof(Node*));
     flow->head_flow = pkt_node;
     flow->tail_flow = malloc(sizeof(Node*));
     flow->tail_flow = pkt_node;
+    flow->track_flow[is_up] = pkt_node;
     LOG_DBG(stream, DBG_PARSER, "First node in list\n");
     return;
   }
 
+  if (!flow->track_flow[is_up]) {
+    LOG_DBG(stream, DBG_PARSER, "First node in a direction\n");
+    flow->track_flow[is_up] = pkt_node;
+    insert_last_node(&(flow->head_flow), &(flow->tail_flow), pkt_node, stream);
+    return;
+  }
+
   if (insert_type == DESC) {
-    insert_node_desc(&(flow->head_flow), pkt_node, stream);
+    LOG_DBG(stream, DBG_PARSER, "ERROR: NOT SUPPORTED\n");
+    // insert_node_desc(&(flow->head_flow), pkt_node, stream);
   }
 
   if (insert_type == ASC) {
-    insert_node_asc(&(flow->head_flow), pkt_node, stream);
+    insert_payload_asc(&(flow->track_flow[is_up]), &(flow->tail_flow), pkt_node, stream);
   }
 
   if (insert_type == FIRST) {
-    insert_first_node(&(flow->head_flow), pkt_node);
+    LOG_DBG(stream, DBG_PARSER, "ERROR: NOT SUPPORTED\n");
+    // insert_first_node(&(flow->head_flow), pkt_node);
   }
 
   if (insert_type == LAST) {
     insert_last_node(&(flow->head_flow), &(flow->tail_flow), pkt_node, stream);
   }
 }
+
 
 // search flow by key in the hash table
 flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream) {
@@ -120,15 +132,13 @@ void free_hash_table(HashTable table) {
   free(table.lists);
 }
 
-
-
 // Get number of packets in hash table
 uint32_t count_packets(HashTable const table) {
 
   int count = 0;
   Node const *node_flow_temp;
 
-  for (size_t i = 0; i < table.size; i++) {
+  for (uint32_t i = 0; i < table.size; i++) {
     node_flow_temp = table.lists[i];
     while (node_flow_temp != NULL) {
       flow_base_t* flow_temp = ((flow_base_t *)node_flow_temp->value);
@@ -150,7 +160,7 @@ uint32_t count_flows(HashTable const table) {
   int count = 0;
   Node *temp;
 
-  for (size_t i = 0; i < table.size; i++) {
+  for (uint32_t i = 0; i < table.size; i++) {
     temp = table.lists[i];
     uint32_t list_size = get_list_size(temp);
     count += list_size;

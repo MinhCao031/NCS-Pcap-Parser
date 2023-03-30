@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "sample_TCP_1.pcap"
+#define PCAP_FILE "sample_FTP_4.pcap"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -33,12 +33,10 @@
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 1)
+#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
 // 1 to print to console, otherwise 0
 #define DBG_CONSOLE (DBG_ALL & 1)
 
-// ASC to insert packet in ascending sequence, otherwise DESC
-#define DATA_DIRECTION ASC
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030
@@ -133,25 +131,78 @@
     }
 
 // Try to insert to flow
-#define TRY_INSERT_FLOW                                                                          \
-    do                                                                                           \
-    {                                                                                            \
-        uint8_t direction = is_packet_up(flow, pkt);                                             \
-        if (pkt.tcp.seq == flow->next_seq[direction])                                            \
-        {                                                                                        \
-            LOG_DBG(stream, DBG_PARSER, "TCP inserted\nComparing get True: SEQ(%u & %u)\n",      \
-                    pkt.tcp.seq, flow->next_seq[direction]);                                     \
-            Node *new_pkt_node = create_payload_node(pkt, is_packet_up(flow, pkt));              \
-            flow->next_seq[direction] = pkt.tcp.seq + pkt.payload.data_len;                      \
-            insert_to_flow(new_pkt_node, 3 - DATA_DIRECTION, flow, stream);                      \
-            inserted_packets += 1;                                                               \
-            flow->total_payload += pkt.payload.data_len;                                         \
-        }                                                                                        \
-        else                                                                                     \
-        {                                                                                        \
-            LOG_DBG(stream, DBG_PARSER, "TCP not inserted\nComparing get False: SEQ(%u & %u)\n", \
-                    pkt.tcp.seq, flow->next_seq[direction]);                                     \
-        }                                                                                        \
+#define TRY_INSERT_FLOW                                                                        \
+    do                                                                                         \
+    {                                                                                          \
+        uint8_t direction = is_packet_up(flow, pkt);                                           \
+        uint32_t expect_seq = flow->next_seq[direction];                                       \
+        uint32_t currnt_seq = pkt.tcp.seq;                                                     \
+        uint32_t currnt_len = pkt.payload.data_len;                                            \
+        if (currnt_seq + currnt_len <= expect_seq)                                             \
+        {                                                                                      \
+            LOG_DBG(stream, DBG_PARSER, "TCP not inserted: SEQ(%u <= %u <= %u)"                \
+                    " -> Payload already in flow\n",                                           \
+                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
+        }                                                                                      \
+        else if (currnt_seq <= expect_seq)                                                     \
+        {                                                                                      \
+            LOG_DBG(stream, DBG_PARSER, "TCP inserted: New payload: SEQ(%u <= %u <= %u)\n",    \
+                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
+            Node *new_pkt_node = create_payload_node(pkt, direction, expect_seq - currnt_seq); \
+            flow->next_seq[direction] = currnt_seq + currnt_len;                               \
+            flow->total_payload += currnt_seq + currnt_len - expect_seq;                       \
+            insert_to_flow(new_pkt_node, ASC, flow, stream);                                  \
+            if (currnt_seq == expect_seq)                                                      \
+                flow->track_flow[direction] = new_pkt_node;                                 \
+            inserted_packets += 1;                                                             \
+        }                                                                                      \
+        else                                                                                   \
+        {                                                                                      \
+            LOG_DBG(stream, DBG_PARSER, "TCP may not be inserted: SEQ(%u <= %u <= %u)\n"       \
+                                        " -> The sequence is higher\n",                        \
+                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
+            printf("TCP may not be inserted: The sequence is higher\n");                       \
+            Node *new_pkt_node = create_payload_node(pkt, direction, 0);                       \
+            insert_to_flow(new_pkt_node, LAST, flow, stream);                                  \
+        }                                                                                      \
+    } while (0)
+
+#define VERIFY_SEQ                                                             \
+    do                                                                         \
+    {                                                                          \
+        LOG_DBG(stream, DBG_PARSER, "Verify packets first...\n");              \
+        Node *track = flow->track_flow[is_packet_up(flow, pkt)];               \
+        if (!track)                                                            \
+            break;                                                             \
+        uint8_t current_direction = ((parsed_payload *)(track->value))->is_up; \
+        uint32_t current_seq = track->key;                                     \
+        uint32_t current_len = ((parsed_payload *)(track->value))->data_len;   \
+        uint8_t next_direction;                                                \
+        uint32_t nextpkt_seq;                                                  \
+        uint32_t nextpkt_len;                                                  \
+        while (track->next != NULL)                                            \
+        {                                                                      \
+            LOG_DBG(stream, DBG_PARSER, "Track pointer -> %lu\n", track->key); \
+            next_direction = ((parsed_payload *)(track->next->value))->is_up;  \
+            if (current_direction != next_direction)                           \
+            {                                                                  \
+                track = track->next;                                           \
+                continue;                                                      \
+            }                                                                  \
+            nextpkt_seq = track->next->key;                                    \
+            nextpkt_len = ((parsed_payload *)(track->next->value))->data_len;  \
+            if (current_seq + current_len == nextpkt_seq)                      \
+            {                                                                  \
+                current_seq = nextpkt_seq + nextpkt_len;                       \
+                current_len = nextpkt_len;                                     \
+                flow->total_payload += nextpkt_len;                            \
+                flow->track_flow[current_direction] = track->next;             \
+                track = track->next;                                           \
+            }                                                                  \
+            else                                                               \
+                break;                                                         \
+        }                                                                      \
+        flow->next_seq[current_direction] = current_seq + current_len;         \
     } while (0)
 
 #endif /*LOG_H*/

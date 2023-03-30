@@ -45,6 +45,7 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     GET_FULL_TIMESTAMP;
     captured_packets++;
     // printf("#%d\n", ++captured_packets);
+    // if (captured_packets > 35) break;
 
     LOG_DBG(fout_parser, DBG_PARSER,
       "Packet # %i\nTime in sec & microsec: %lu.%7lu\nFull timestamp = %s\n",
@@ -124,15 +125,15 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
   print_hashtable(table, fout_list_flow);
 
   // Test a random flow
-  // printf("\nTest 01: Get a random flow\n");
+  printf("\nTest 01: Get a random flow\n");
 
-  // flow_base_t* flow_test = search_flow(table, 6359988029046827285, stdout);
-  // if (flow_test) {
-  //   print_flow(*flow_test, stdout);
-  //   printf("\nTest 02: Get payloads in flow\n");
-  //   char* long_payload = payload_to_string(flow_test->head_flow, flow_test->total_payload);
-  //   printf("All payload in this flow:\n%s\n\n<END OF FLOW>\n", long_payload);
-  // } else printf("Flow not found.\n");
+  flow_base_t* flow_test = search_flow(table, 6359988029046827285, stdout);
+  if (flow_test) {
+    print_flow(*flow_test, stdout);
+    printf("\nTest 02: Get payloads in flow\n");
+    char* long_payload = payload_to_string(flow_test->head_flow, flow_test->total_payload);
+    printf("All payload in this flow:\n%s\n\n<END OF FLOW>\n", long_payload);
+  } else printf("Flow not found.\n");
 
   LOG_DBG(fout_list_flow, DBG_FLOW,
     "Number of packets: %u\nNumber of flows: %u\n"
