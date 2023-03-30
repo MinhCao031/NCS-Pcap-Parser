@@ -3,6 +3,9 @@
 
 #include <glib-2.0/glib.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 static gboolean smtp_auth_parameter_decoding_enabled = FALSE;
 
@@ -559,9 +562,9 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
         }
       }
 
-      printf("\tSMTP state: %s\n\tAUTH state: %s\n",
-             smtp_state_to_str(session_state->smtp_state),
-             smtp_auth_state_to_str(session_state->auth_state));
+      // printf("\tSMTP state: %s\n\tAUTH state: %s\n",
+      //        smtp_state_to_str(session_state->smtp_state),
+      //        smtp_auth_state_to_str(session_state->auth_state));
     }
 
     loffset = next_offset;
@@ -647,7 +650,7 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
 
           code = (line_code[0] - '0') * 100 + (line_code[1] - '0') * 10 +
                  (line_code[2] - '0');
-          printf("    Code: %d\n", code);
+          printf("\tCode: %d\n", code);
           if ((linelen > 3) && (*(tvb + offset + 3) == '-')) {
             if (multiline_state == SMTP_MULTILINE_NONE) {
               multiline_state = SMTP_MULTILINE_START;
@@ -716,9 +719,9 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
             }
           }
 
-          printf("\tSMTP state: %s\n\tAUTH state: %s\n",
-                 smtp_state_to_str(session_state->smtp_state),
-                 smtp_auth_state_to_str(session_state->auth_state));
+          // printf("\tSMTP state: %s\n\tAUTH state: %s\n",
+          //        smtp_state_to_str(session_state->smtp_state),
+          //        smtp_auth_state_to_str(session_state->auth_state));
         }
 
         // Clear multiline state if this is the last line
@@ -732,6 +735,9 @@ int smtp_decoder(u_char const *tvb, gint tvb_size,
       offset = next_offset;
     }
   }
+  printf("\tSMTP state: %s\n\tAUTH state: %s\n",
+         smtp_state_to_str(session_state->smtp_state),
+         smtp_auth_state_to_str(session_state->auth_state));
   /** printf("payload: %s\n", tvb); */
   printf(
       "------------------------------------------------------------------\n");

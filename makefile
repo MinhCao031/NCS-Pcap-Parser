@@ -22,7 +22,7 @@ OUTPFILE += $(SOURCE)
 run: com clean
 	./$(OUTPFILE)
 
-dbg: com clean
+db: com clean
 	gdb $(OUTPFILE)
 
 com: clean

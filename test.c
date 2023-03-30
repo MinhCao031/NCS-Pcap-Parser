@@ -2,221 +2,82 @@
 
 #include "lib/dissect_smtp.h"
 #include "lib/ws/wsutil/str_util.h"
+#include "lib/ws/wsutil/ws_assert.h"
 
 #include <string.h>
+#include <sys/types.h>
 
 #define PNAME "Internet Message Format"
 #define PSNAME "IMF"
 #define PFNAME "imf"
 
-static int proto_imf = -1;
-
-static int hf_imf_date = -1;
-static int hf_imf_from = -1;
-static int hf_imf_sender = -1;
-static int hf_imf_reply_to = -1;
-static int hf_imf_to = -1;
-static int hf_imf_cc = -1;
-static int hf_imf_bcc = -1;
-static int hf_imf_message_id = -1;
-static int hf_imf_in_reply_to = -1;
-static int hf_imf_references = -1;
-static int hf_imf_subject = -1;
-static int hf_imf_comments = -1;
-static int hf_imf_user_agent = -1;
-static int hf_imf_keywords = -1;
-static int hf_imf_resent_date = -1;
-static int hf_imf_resent_from = -1;
-static int hf_imf_resent_sender = -1;
-static int hf_imf_resent_to = -1;
-static int hf_imf_resent_cc = -1;
-static int hf_imf_resent_bcc = -1;
-static int hf_imf_resent_message_id = -1;
-static int hf_imf_return_path = -1;
-static int hf_imf_received = -1;
-static int hf_imf_content_type = -1;
-static int hf_imf_content_type_type = -1;
-static int hf_imf_content_type_parameters = -1;
-static int hf_imf_content_id = -1;
-static int hf_imf_content_transfer_encoding = -1;
-static int hf_imf_content_description = -1;
-static int hf_imf_mime_version = -1;
-static int hf_imf_thread_index = -1;
-static int hf_imf_ext_mailer = -1;
-static int hf_imf_ext_mimeole = -1;
-static int hf_imf_ext_tnef_correlator = -1;
-static int hf_imf_ext_expiry_date = -1;
-static int hf_imf_ext_uidl = -1;
-static int hf_imf_ext_authentication_warning = -1;
-static int hf_imf_ext_virus_scanned = -1;
-static int hf_imf_extension = -1;
-static int hf_imf_extension_type = -1;
-static int hf_imf_extension_value = -1;
-
-/* RFC 2156 */
-static int hf_imf_autoforwarded = -1;
-static int hf_imf_autosubmitted = -1;
-static int hf_imf_x400_content_identifier = -1;
-static int hf_imf_content_language = -1;
-static int hf_imf_conversion = -1;
-static int hf_imf_conversion_with_loss = -1;
-static int hf_imf_delivery_date = -1;
-static int hf_imf_discarded_x400_ipms_extensions = -1;
-static int hf_imf_discarded_x400_mts_extensions = -1;
-static int hf_imf_dl_expansion_history = -1;
-static int hf_imf_deferred_delivery = -1;
-static int hf_imf_expires = -1;
-static int hf_imf_importance = -1;
-static int hf_imf_incomplete_copy = -1;
-static int hf_imf_latest_delivery_time = -1;
-static int hf_imf_message_type = -1;
-static int hf_imf_original_encoded_information_types = -1;
-static int hf_imf_originator_return_address = -1;
-static int hf_imf_priority = -1;
-static int hf_imf_reply_by = -1;
-static int hf_imf_sensitivity = -1;
-static int hf_imf_supersedes = -1;
-static int hf_imf_x400_content_type = -1;
-static int hf_imf_x400_mts_identifier = -1;
-static int hf_imf_x400_originator = -1;
-static int hf_imf_x400_received = -1;
-static int hf_imf_x400_recipients = -1;
-
-static int hf_imf_delivered_to = -1;
-
-static int hf_imf_message_text = -1;
-
-static int hf_imf_display_name = -1;
-static int hf_imf_address = -1;
-/* static int hf_imf_mailbox_list = -1; */
-static int hf_imf_mailbox_list_item = -1;
-/* static int hf_imf_address_list = -1; */
-static int hf_imf_address_list_item = -1;
-
-/* draft-zeilenga-email-seclabel-04 */
-static int hf_imf_siolabel = -1;
-static int hf_imf_siolabel_marking = -1;
-static int hf_imf_siolabel_fgcolor = -1;
-static int hf_imf_siolabel_bgcolor = -1;
-static int hf_imf_siolabel_type = -1;
-static int hf_imf_siolabel_label = -1;
-static int hf_imf_siolabel_unknown = -1;
-
-static int ett_imf = -1;
-static int ett_imf_content_type = -1;
-static int ett_imf_mailbox = -1;
-static int ett_imf_group = -1;
-static int ett_imf_mailbox_list = -1;
-static int ett_imf_address_list = -1;
-static int ett_imf_siolabel = -1;
-static int ett_imf_extension = -1;
-static int ett_imf_message_text = -1;
-
 #define NO_SUBDISSECTION NULL
 
-struct imf_field {
-  char *name; /* field name - in lower case for matching purposes */
-  int *hf_id; /* wireshark field */
-  void (*subdissector)();
-  gboolean add_to_col_info; /* add field to column info */
+typedef struct _value_string {
+  const char *strptr;
+  guint32 value;
+} value_string;
+
+enum field {
+  IMF_FIELD_FROM,
+  IMF_FIELD_TO,
+  IMF_FIELD_CC,
+  IMF_FIELD_BCC,
+  IMF_FIELD_REPLY_TO,
+  IMF_FIELD_SENDER,
+  IMF_FIELD_RESENT_FROM,
+  IMF_FIELD_RESENT_TO,
+  IMF_FIELD_RESENT_CC,
+  IMF_FIELD_RESENT_BCC,
+  IMF_FIELD_RESENT_REPLY_TO,
+  IMF_FIELD_RESENT_SENDER,
+  IMF_FIELD_RESENT_MESSAGE_ID,
+  IMF_FIELD_MESSAGE_ID,
+  IMF_FIELD_IN_REPLY_TO,
+  IMF_FIELD_REFERENCES,
+  IMF_FIELD_SUBJECT,
+  IMF_FIELD_COMMENTS,
+  IMF_FIELD_KEYWORDS,
+  IMF_FIELD_ERRORS_TO,
+  IMF_FIELD_CONTENT_TYPE
 };
+
+struct imf_field {
+  const char *name;
+  enum field hf_id;
+  void (*dissect)();
+};
+
 static void dissect_imf_mailbox();
 static void dissect_imf_address();
 static void dissect_imf_address_list();
 static void dissect_imf_mailbox_list();
 static void dissect_imf_siolabel();
 
-static struct imf_field imf_fields[] = {
-    {"unknown-extension", &hf_imf_extension_type, NO_SUBDISSECTION,
-     FALSE},                                         /* unknown extension */
-    {"date", &hf_imf_date, NO_SUBDISSECTION, FALSE}, /* date-time */
-    {"from", &hf_imf_from, dissect_imf_mailbox_list, TRUE}, /* mailbox_list */
-    {"sender", &hf_imf_sender, dissect_imf_mailbox, FALSE}, /* mailbox */
-    {"reply-to", &hf_imf_reply_to, dissect_imf_address_list,
-     FALSE},                                               /* address_list */
-    {"to", &hf_imf_to, dissect_imf_address_list, FALSE},   /* address_list */
-    {"cc", &hf_imf_cc, dissect_imf_address_list, FALSE},   /* address_list */
-    {"bcc", &hf_imf_bcc, dissect_imf_address_list, FALSE}, /* address_list */
-    {"message-id", &hf_imf_message_id, NO_SUBDISSECTION, FALSE},   /* msg-id */
-    {"in-reply-to", &hf_imf_in_reply_to, NO_SUBDISSECTION, FALSE}, /* msg-id */
-    {"references", &hf_imf_references, NO_SUBDISSECTION, FALSE},   /* msg-id */
-    {"subject", &hf_imf_subject, NO_SUBDISSECTION, TRUE},    /* unstructured */
-    {"comments", &hf_imf_comments, NO_SUBDISSECTION, FALSE}, /* unstructured */
-    {"user-agent", &hf_imf_user_agent, NO_SUBDISSECTION,
-     FALSE},                                     /* unstructured */
-    {"keywords", &hf_imf_keywords, NULL, FALSE}, /* phrase_list */
-    {"resent-date", &hf_imf_resent_date, NO_SUBDISSECTION, FALSE},
-    {"resent-from", &hf_imf_resent_from, dissect_imf_mailbox_list, FALSE},
-    {"resent-sender", &hf_imf_resent_sender, dissect_imf_mailbox, FALSE},
-    {"resent-to", &hf_imf_resent_to, dissect_imf_address_list, FALSE},
-    {"resent-cc", &hf_imf_resent_cc, dissect_imf_address_list, FALSE},
-    {"resent-bcc", &hf_imf_resent_bcc, dissect_imf_address_list, FALSE},
-    {"resent-message-id", &hf_imf_resent_message_id, NO_SUBDISSECTION, FALSE},
-    {"return-path", &hf_imf_return_path, NULL, FALSE},
-    {"received", &hf_imf_received, NO_SUBDISSECTION, FALSE},
-    /* these are really multi-part - but we parse them anyway */
-    {"content-type", &hf_imf_content_type, NULL,
-     FALSE}, /* handled separately as a special case */
-    {"content-id", &hf_imf_content_id, NULL, FALSE},
-    {"content-description", &hf_imf_content_description, NULL, FALSE},
-    {"content-transfer-encoding", &hf_imf_content_transfer_encoding, NULL,
-     FALSE},
-    {"mime-version", &hf_imf_mime_version, NO_SUBDISSECTION, FALSE},
-    /* MIXER - RFC 2156 */
-    {"autoforwarded", &hf_imf_autoforwarded, NULL, FALSE},
-    {"autosubmitted", &hf_imf_autosubmitted, NULL, FALSE},
-    {"x400-content-identifier", &hf_imf_x400_content_identifier, NULL, FALSE},
-    {"content-language", &hf_imf_content_language, NULL, FALSE},
-    {"conversion", &hf_imf_conversion, NULL, FALSE},
-    {"conversion-with-loss", &hf_imf_conversion_with_loss, NULL, FALSE},
-    {"delivery-date", &hf_imf_delivery_date, NULL, FALSE},
-    {"discarded-x400-ipms-extensions", &hf_imf_discarded_x400_ipms_extensions,
-     NULL, FALSE},
-    {"discarded-x400-mts-extensions", &hf_imf_discarded_x400_mts_extensions,
-     NULL, FALSE},
-    {"dl-expansion-history", &hf_imf_dl_expansion_history, NULL, FALSE},
-    {"deferred-delivery", &hf_imf_deferred_delivery, NULL, FALSE},
-    {"expires", &hf_imf_expires, NULL, FALSE},
-    {"importance", &hf_imf_importance, NULL, FALSE},
-    {"incomplete-copy", &hf_imf_incomplete_copy, NULL, FALSE},
-    {"latest-delivery-time", &hf_imf_latest_delivery_time, NULL, FALSE},
-    {"message-type", &hf_imf_message_type, NULL, FALSE},
-    {"original-encoded-information-types",
-     &hf_imf_original_encoded_information_types, NULL, FALSE},
-    {"originator-return-address", &hf_imf_originator_return_address, NULL,
-     FALSE},
-    {"priority", &hf_imf_priority, NULL, FALSE},
-    {"reply-by", &hf_imf_reply_by, NULL, FALSE},
-    {"sensitivity", &hf_imf_sensitivity, NULL, FALSE},
-    {"supersedes", &hf_imf_supersedes, NULL, FALSE},
-    {"x400-content-type", &hf_imf_x400_content_type, NULL, FALSE},
-    {"x400-mts-identifier", &hf_imf_x400_mts_identifier, NULL, FALSE},
-    {"x400-originator", &hf_imf_x400_originator, NULL, FALSE},
-    {"x400-received", &hf_imf_x400_received, NULL, FALSE},
-    {"x400-recipients", &hf_imf_x400_recipients, NULL, FALSE},
-    /* delivery */
-    {"delivered-to", &hf_imf_delivered_to, dissect_imf_mailbox,
-     FALSE}, /* mailbox */
-    /* some others */
-    {"x-mailer", &hf_imf_ext_mailer, NO_SUBDISSECTION,
-     FALSE}, /* unstructured */
-    {"thread-index", &hf_imf_thread_index, NO_SUBDISSECTION,
-     FALSE}, /* unstructured */
-    {"x-mimeole", &hf_imf_ext_mimeole, NO_SUBDISSECTION,
-     FALSE}, /* unstructured */
-    {"expiry-date", &hf_imf_ext_expiry_date, NO_SUBDISSECTION,
-     FALSE}, /* unstructured */
-    {"x-ms-tnef-correlator", &hf_imf_ext_tnef_correlator, NO_SUBDISSECTION,
-     FALSE},                                               /* unstructured */
-    {"x-uidl", &hf_imf_ext_uidl, NO_SUBDISSECTION, FALSE}, /* unstructured */
-    {"x-authentication-warning", &hf_imf_ext_authentication_warning,
-     NO_SUBDISSECTION, FALSE}, /* unstructured */
-    {"x-virus-scanned", &hf_imf_ext_virus_scanned, NO_SUBDISSECTION,
-     FALSE}, /* unstructured */
-    {"sio-label", &hf_imf_siolabel, dissect_imf_siolabel,
-     FALSE}, /* sio-label */
-    {NULL, NULL, NULL, FALSE},
-};
+const struct imf_field imf_fields[] = {
+
+    {"from", IMF_FIELD_FROM, dissect_imf_mailbox_list},
+    {"to", IMF_FIELD_TO, dissect_imf_address_list},
+    {"cc", IMF_FIELD_CC, dissect_imf_address_list},
+    {"bcc", IMF_FIELD_BCC, dissect_imf_address_list},
+    {"reply-to", IMF_FIELD_REPLY_TO, dissect_imf_address_list},
+    {"sender", IMF_FIELD_SENDER, dissect_imf_mailbox},
+    {"resent-from", IMF_FIELD_RESENT_FROM, dissect_imf_mailbox_list},
+    {"resent-to", IMF_FIELD_RESENT_TO, dissect_imf_address_list},
+    {"resent-cc", IMF_FIELD_RESENT_CC, dissect_imf_address_list},
+    {"resent-bcc", IMF_FIELD_RESENT_BCC, dissect_imf_address_list},
+    {"resent-reply-to", IMF_FIELD_RESENT_REPLY_TO, dissect_imf_address_list},
+    {"resent-sender", IMF_FIELD_RESENT_SENDER, dissect_imf_mailbox},
+    {"resent-message-id", IMF_FIELD_RESENT_MESSAGE_ID, dissect_imf_siolabel},
+    {"message-id", IMF_FIELD_MESSAGE_ID, dissect_imf_siolabel},
+    {"in-reply-to", IMF_FIELD_IN_REPLY_TO, dissect_imf_siolabel},
+    {"references", IMF_FIELD_REFERENCES, dissect_imf_siolabel},
+    {"subject", IMF_FIELD_SUBJECT, NO_SUBDISSECTION},
+    {"comments", IMF_FIELD_COMMENTS, NO_SUBDISSECTION},
+    {"keywords", IMF_FIELD_KEYWORDS, NO_SUBDISSECTION},
+    {"errors-to", IMF_FIELD_ERRORS_TO, dissect_imf_address},
+    {"content-type", IMF_FIELD_CONTENT_TYPE, NO_SUBDISSECTION},
+    {NULL, 0, NULL}};
 
 static void dissect_imf_mailbox(){};
 static void dissect_imf_address(){};
@@ -234,6 +95,55 @@ static int tvb_find_char(const u_char *tvb, int start_offset, int max_length,
     }
   }
   return -1;
+}
+
+int imf_find_field_end(const u_char *tvb, int offset, gint max_length,
+                       gboolean *last_field) {
+
+  while (offset < max_length) {
+
+    /* look for CR */
+    offset = tvb_find_char(tvb, offset, max_length - offset, '\r');
+
+    if (offset != -1) {
+      /* protect against buffer overrun and only then look for next char */
+      if (++offset < max_length && *(tvb + offset) == '\n') {
+        /* OK - so we have found CRLF */
+        if (++offset >= max_length) {
+          /* end of buffer and also end of fields */
+          if (last_field) {
+            *last_field = TRUE;
+          }
+          /* caller expects that there is CRLF after returned offset, if
+           * last_field is set */
+          return offset - 2;
+        }
+        /* peek the next character */
+        switch (*(tvb + offset)) {
+        case '\r':
+          /* probably end of the fields */
+          if ((offset + 1) < max_length && *(tvb + offset + 1) == '\n') {
+            if (last_field) {
+              *last_field = TRUE;
+            }
+          }
+          return offset;
+        case ' ':
+        case '\t':
+          /* continuation line */
+          break;
+        default:
+          /* this is a new field */
+          return offset;
+        }
+      }
+    } else {
+      /* couldn't find a CR - strange */
+      break;
+    }
+  }
+
+  return -1; /* Fail: No CR found (other than possible continuation) */
 }
 
 void dissect_imf(const u_char *tvb, size_t tvb_len) {
@@ -257,7 +167,6 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
 
     // look for a colon first
     end_offset = tvb_find_char(tvb, start_offset, max_length, ':');
-    printf("end_offset: %d\n", end_offset);
 
     if (end_offset == -1) {
       // no colon found, so this is not a valid header
@@ -266,17 +175,49 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
       key = g_strndup((const char *)tvb + start_offset,
                       end_offset - start_offset);
 
-      
       // convert to lower case
-      ascii_strdown_inplace(key);
-        
+      key = g_ascii_strdown(key, end_offset - start_offset);
+
+      // find imf_field from imf_fields array
+      // for(f_info = imf_fields; f_info->name; f_info++) {
+      //   if (strcmp(f_info->name, key) == 0) {
+      //     break;
+      //   }
+      // }
+
+      // printf("F info Key: %s, id: %d\n", key, f_info->hf_id);
+
+      /* value starts immediately after the colon */
+      start_offset = end_offset + 1;
+
+      end_offset =
+          imf_find_field_end(tvb, start_offset, max_length, &last_field);
     }
 
-    printf("Key: %s\n", key);
+    /* remove any leading whitespace */
+    for (value_offset = start_offset; value_offset < end_offset; value_offset++)
+      if (!g_ascii_isspace(*(tvb + value_offset))) {
+        break;
+      }
+    // printf("Key: %s\n", key);
+    // // print value with start_offset and end_offset
+    // printf("Value: %.*s", end_offset - start_offset,
+    //        (const char *)tvb + start_offset);
 
-    last_field = TRUE;
+    // print key-value pair in pretty table format
+    printf("%-30s %.*s", key, end_offset - start_offset,
+           (const char *)tvb + start_offset);
+
     start_offset = end_offset;
   }
+
+  if (last_field) {
+    end_offset += 2;
+  }
+
+  next_tvb = (u_char *)tvb + end_offset;
+  // print next tvb
+  // printf("Next tvb: %s", next_tvb);
 }
 void flow_browser(flow_base_t *flow) {
 
@@ -436,6 +377,8 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
       break;
   }
   }
+
+  print_hashtable(table, fout_list_flow);
 
   flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
   flow_browser(flow_test);
