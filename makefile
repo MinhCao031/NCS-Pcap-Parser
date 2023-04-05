@@ -3,7 +3,7 @@ OPTIMIZE +=	-O3
 DEBUG    +=	-g
 DEFINES +=	-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
 WARNING +=	-Wall -Wextra 
-WARNING += -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-pointer-sign 
+# WARNING += -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-pointer-sign 
 # Come before C files
 INCLUDED +=	`pkg-config --cflags --libs glib-2.0`
 

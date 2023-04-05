@@ -3,6 +3,7 @@
 
 #include "dissect_smtp.h"
 #include <glib-2.0/glib.h>
+#include <glib-2.0/glibconfig.h>
 
 #include "ws/wsutil/str_util.h"
 #define PNAME "Internet Message Format"
@@ -10,12 +11,6 @@
 #define PFNAME "imf"
 
 #define NO_SUBDISSECTION NULL
-
-static void dissect_imf_mailbox();
-static void dissect_imf_address();
-static void dissect_imf_address_list();
-static void dissect_imf_mailbox_list();
-static void dissect_imf_siolabel();
 
 enum field {
   IMF_FIELD_CONTENT_TYPE,
@@ -47,44 +42,10 @@ enum field {
   NOPE,
 };
 struct imf_field {
-  const char *name;
-  enum field hf_id;
-  void (*dissect)();
+  const char *name; /* field name - in lower case for matching purposes */
+  enum field hf_id; /* wireshark field */
+  void (*subdissector)(const guint8 *tvb, int offset, int length);
 };
-static struct imf_field imf_fields[] = {
-
-    {"content-type", IMF_FIELD_CONTENT_TYPE, NO_SUBDISSECTION},
-    {"from", IMF_FIELD_FROM, dissect_imf_mailbox_list},
-    {"to", IMF_FIELD_TO, dissect_imf_address_list},
-    {"cc", IMF_FIELD_CC, dissect_imf_address_list},
-    {"bcc", IMF_FIELD_BCC, dissect_imf_address_list},
-    {"reply-to", IMF_FIELD_REPLY_TO, dissect_imf_address_list},
-    {"sender", IMF_FIELD_SENDER, dissect_imf_mailbox},
-    {"resent-from", IMF_FIELD_RESENT_FROM, dissect_imf_mailbox_list},
-    {"resent-to", IMF_FIELD_RESENT_TO, dissect_imf_address_list},
-    {"resent-cc", IMF_FIELD_RESENT_CC, dissect_imf_address_list},
-    {"resent-bcc", IMF_FIELD_RESENT_BCC, dissect_imf_address_list},
-    {"resent-reply-to", IMF_FIELD_RESENT_REPLY_TO, dissect_imf_address_list},
-    {"resent-sender", IMF_FIELD_RESENT_SENDER, dissect_imf_mailbox},
-    {"resent-message-id", IMF_FIELD_RESENT_MESSAGE_ID, dissect_imf_siolabel},
-    {"message-id", IMF_FIELD_MESSAGE_ID, dissect_imf_siolabel},
-    {"in-reply-to", IMF_FIELD_IN_REPLY_TO, dissect_imf_siolabel},
-    {"references", IMF_FIELD_REFERENCES, dissect_imf_siolabel},
-    {"subject", IMF_FIELD_SUBJECT, NO_SUBDISSECTION},
-    {"comments", IMF_FIELD_COMMENTS, NO_SUBDISSECTION},
-    {"keywords", IMF_FIELD_KEYWORDS, NO_SUBDISSECTION},
-    {"errors-to", IMF_FIELD_ERRORS_TO, dissect_imf_address},
-    {"mime-version", IMF_FIELD_MIME_VERSION, dissect_imf_address},
-    {"date", IMF_FIELD_DATE, NO_SUBDISSECTION},
-    {"user-agent", IMF_FIELD_USER_AGENT, NO_SUBDISSECTION},
-    {"content-language", IMF_FIELD_CONTENT_LANGUAGE, NO_SUBDISSECTION},
-    {NULL, NOPE, NULL}};
-
-static void dissect_imf_mailbox(){};
-static void dissect_imf_address(){};
-static void dissect_imf_address_list(){};
-static void dissect_imf_mailbox_list(){};
-static void dissect_imf_siolabel(){};
 
 // find index if charactor in string
 static int tvb_find_char(const guint8 *tvb, const gint start_offset,
@@ -112,8 +73,165 @@ static int tvb_find_char(const guint8 *tvb, const gint start_offset,
   }
   return -1;
 }
+static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
 
-int imf_find_field_end(const u_char *tvb, int offset, gint max_length,
+  int addr_pos, end_pos;
+
+  /* Here is the plan:
+     If we can't find and angle brackets, then the whole field is an address.
+     If we find angle brackets, then the address is between them and the display
+     name is anything before the opening angle bracket
+  */
+
+  if ((addr_pos = tvb_find_char(tvb, offset, length, '<')) == -1) {
+    /* we can't find an angle bracket - the whole field is therefore the address
+     */
+
+    printf("\taddress: %.*s\n",length, tvb + offset);
+
+  } else {
+    /* we can find an angle bracket - let's see if we can find a display name */
+    /* XXX: the '<' could be in the display name */
+
+    for (; offset < addr_pos; offset++) {
+      if (!g_ascii_isspace(*(tvb + offset))) {
+        break;
+      }
+    }
+
+    end_pos =
+        tvb_find_char(tvb, addr_pos + 1, length - (addr_pos + 1 - offset), '>');
+
+        // print address string with length
+    printf("\taddress: %.*s\n",end_pos - addr_pos - 1, tvb + addr_pos + 1);
+
+  }
+};
+static void dissect_imf_address(const guint8 *tvb, int offset, gint length) {
+
+  int addr_pos;
+
+  /* if there is a colon present it is a group */
+  if ((addr_pos = tvb_find_char(tvb, offset, length, ':')) == -1) {
+
+    /* there isn't - so it must be a mailbox */
+    dissect_imf_mailbox(tvb, offset, length);
+
+  } else {
+
+    /* consume any whitespace */
+    for (addr_pos++; addr_pos < (offset + length); addr_pos++) {
+      if (!g_ascii_isspace(*(tvb + addr_pos))) {
+        break;
+      }
+    }
+
+    if (*(tvb + addr_pos) != ';') {
+
+      // dissect_imf_mailbox_list(tvb, addr_pos, length - (addr_pos - offset));
+
+      /* XXX: need to check for final ';' */
+    }
+  }
+};
+static void dissect_imf_address_list(const guint8 *tvb, int offset,
+                                     gint length) {
+
+  int count = 0;
+  int item_offset;
+  int end_offset;
+  int item_length;
+
+  item_offset = offset;
+
+  do {
+
+    end_offset =
+        tvb_find_char(tvb, item_offset, length - (item_offset - offset), ',');
+
+    count++; /* increase the number of items */
+
+    if (end_offset == -1) {
+      /* length is to the end of the buffer */
+      item_length = length - (item_offset - offset);
+    } else {
+      item_length = end_offset - item_offset;
+    }
+    // addr_item = proto_tree_add_item(tree, hf_imf_address_list_item, tvb,
+    // item_offset, item_length, ENC_ASCII|ENC_NA);
+    dissect_imf_address(tvb, item_offset, item_length);
+
+    if (end_offset != -1) {
+      item_offset = end_offset + 1;
+    }
+  } while (end_offset != -1);
+
+  // /* now indicate the number of items found */
+  // proto_item_append_text(item, ", %d item%s", count, plurality(count, "",
+  // "s"));
+}
+static void dissect_imf_mailbox_list(const guint8 *tvb, int offset, gint length){
+
+  int         count = 0;
+  int         item_offset;
+  int         end_offset;
+  int         item_length;
+
+
+  item_offset = offset;
+
+  do {
+
+    end_offset = tvb_find_char(tvb, item_offset, length - (item_offset - offset), ',');
+
+    count++; /* increase the number of items */
+
+    if(end_offset == -1) {
+      /* length is to the end of the buffer */
+      item_length = length - (item_offset - offset);
+    } else {
+      item_length = end_offset - item_offset;
+    }
+    dissect_imf_mailbox(tvb, item_offset, item_length);
+
+    if(end_offset != -1) {
+      item_offset = end_offset + 1;
+    }
+  } while(end_offset != -1);
+
+};
+static void dissect_imf_siolabel(){};
+
+static struct imf_field imf_fields[] = {
+
+    {"content-type", IMF_FIELD_CONTENT_TYPE, NO_SUBDISSECTION},
+    {"from", IMF_FIELD_FROM, dissect_imf_mailbox_list},
+    {"to", IMF_FIELD_TO, dissect_imf_address_list},
+    {"cc", IMF_FIELD_CC, dissect_imf_address_list},
+    {"bcc", IMF_FIELD_BCC, dissect_imf_address_list},
+    {"reply-to", IMF_FIELD_REPLY_TO, dissect_imf_address_list},
+    {"sender", IMF_FIELD_SENDER, dissect_imf_mailbox},
+    {"resent-from", IMF_FIELD_RESENT_FROM, dissect_imf_mailbox_list},
+    {"resent-to", IMF_FIELD_RESENT_TO, dissect_imf_address_list},
+    {"resent-cc", IMF_FIELD_RESENT_CC, dissect_imf_address_list},
+    {"resent-bcc", IMF_FIELD_RESENT_BCC, dissect_imf_address_list},
+    {"resent-reply-to", IMF_FIELD_RESENT_REPLY_TO, dissect_imf_address_list},
+    {"resent-sender", IMF_FIELD_RESENT_SENDER, dissect_imf_mailbox},
+    {"resent-message-id", IMF_FIELD_RESENT_MESSAGE_ID, dissect_imf_siolabel},
+    {"message-id", IMF_FIELD_MESSAGE_ID, dissect_imf_siolabel},
+    {"in-reply-to", IMF_FIELD_IN_REPLY_TO, dissect_imf_siolabel},
+    {"references", IMF_FIELD_REFERENCES, dissect_imf_siolabel},
+    {"subject", IMF_FIELD_SUBJECT, NO_SUBDISSECTION},
+    {"comments", IMF_FIELD_COMMENTS, NO_SUBDISSECTION},
+    {"keywords", IMF_FIELD_KEYWORDS, NO_SUBDISSECTION},
+    {"errors-to", IMF_FIELD_ERRORS_TO, dissect_imf_address},
+    {"mime-version", IMF_FIELD_MIME_VERSION, NO_SUBDISSECTION},
+    {"date", IMF_FIELD_DATE, NO_SUBDISSECTION},
+    {"user-agent", IMF_FIELD_USER_AGENT, NO_SUBDISSECTION},
+    {"content-language", IMF_FIELD_CONTENT_LANGUAGE, NO_SUBDISSECTION},
+    {NULL, NOPE, NULL}};
+
+int imf_find_field_end(const guint8 *tvb, int offset, gint max_length,
                        gboolean *last_field) {
 
   while (offset < max_length) {
@@ -162,7 +280,7 @@ int imf_find_field_end(const u_char *tvb, int offset, gint max_length,
   return -1; /* Fail: No CR found (other than possible continuation) */
 }
 
-static void dissect_imf_content_type(const u_char *tvb, int offset, int length,
+static void dissect_imf_content_type(const guint8 *tvb, int offset, int length,
                                      guint8 **type, guint8 **parameters) {
   int first_colon;
   int end_offset;
@@ -605,7 +723,7 @@ static gint find_next_boundary(const guint8 *tvb, gint tvb_size, gint start,
  *
  * Return the offset to the start of the first body-part.
  */
-static gint process_preamble(const u_char *tvb, gint tvb_size,
+static gint process_preamble(const guint8 *tvb, gint tvb_size,
                              multipart_info_t *m_info,
                              gboolean *last_boundary) {
   gint boundary_start, boundary_line_len;
@@ -773,6 +891,7 @@ static const multipart_header_t multipart_headers[] = {
 /* Useful when you have an array whose size you can tell at compile-time */
 #define array_length(x) (sizeof x / sizeof x[0])
 
+static gboolean remove_base64_encoding = FALSE;
 /* Returns index of method in multipart_headers */
 static gint is_known_multipart_header(const char *header_str, guint len) {
   guint i;
@@ -827,9 +946,6 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
       find_next_boundary(tvb, tvb_size, offset, boundary, boundary_len,
                          &boundary_line_len, last_boundary);
 
-  printf("boundary_start: %d\n", boundary_start);
-  printf("boundary_line_len: %d\n", boundary_line_len);
-
   if (boundary_start <= 0) {
     return -1;
   }
@@ -857,7 +973,7 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
      */
     next_offset = imf_find_field_end(tvb, offset, (tvb_size - offset) + offset,
                                      &last_field);
-    printf("next_offset: %d\n", next_offset);
+
     /* the following should never happen */
     /* If cr not found, won't have advanced - get out to avoid infinite loop! */
     /*
@@ -881,11 +997,9 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
     // hdr_str = tvb_get_string_enc(pinfo->pool, tvb, offset, next_offset -
     // offset, ENC_ASCII);
     hdr_str = (char *)g_memdup2(tvb + offset, next_offset - offset);
-    printf("hdr_str: %s\n", hdr_str);
 
     colon_offset = 0;
     header_str = unfold_and_compact_mime_header(hdr_str, &colon_offset);
-    printf("header_str: %s, colon_offset: %d\n", header_str, colon_offset);
     if (colon_offset <= 0) {
       /* if there is no colon it's no header, so break and add complete line to
        * the body */
@@ -895,7 +1009,6 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
       gint hf_index;
 
       hf_index = is_known_multipart_header(header_str, colon_offset);
-      printf("hf_index: %d\n", hf_index);
 
       if (hf_index == -1) {
         if (isprint_string(header_str)) {
@@ -911,8 +1024,6 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
             // using g_memdup2 instead of wmem_strdup
             (char *)g_memdup2(header_str + colon_offset + 1,
                               strlen(header_str + colon_offset + 1));
-
-        printf("value_str: %s\n", value_str);
 
         switch (hf_index) {
         case POS_ORIGINALCONTENT: {
@@ -948,11 +1059,13 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
           }
 
           content_type_str = ascii_strdown_inplace(value_str);
+          printf("content_type_str: %s\n", content_type_str);
 
           /* find the "name" parameter in case we don't find a content
            * disposition "filename" */
           mimetypename =
               ws_find_media_type_parameter(message_info.media_str, "name");
+          printf("mimetypename: %s\n", mimetypename);
 
           if (strncmp(content_type_str, "application/octet-stream",
                       sizeof("application/octet-stream") - 1) == 0) {
@@ -986,10 +1099,12 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
           }
 
           content_trans_encoding_str = ascii_strdown_inplace(value_str);
+          printf("Content transfer encoding: %s\n", content_trans_encoding_str);
         } break;
         case POS_CONTENT_DISPOSITION: {
           /* find the "filename" parameter */
           filename = ws_find_media_type_parameter(value_str, "filename");
+          printf("filename: %s\n", filename);
         } break;
         case POS_CONTENT_ID:
           // use g_memdup2 instead of wmem_strdup
@@ -1001,102 +1116,102 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
         }
       }
     }
-        offset = next_offset;
-    }
+    offset = next_offset;
+  }
 
-    body_start = next_offset;
-    printf("body_start: %d\n", body_start);
+  body_start = next_offset;
 
+  /*
+   * Process the body
+   */
+
+  {
+    gint body_len = boundary_start - body_start;
+    // tvbuff_t *tmp_tvb = tvb_new_subset_length(tvb, body_start, body_len);
+
+    guint8 *tmp_tvb = (guint8 *)g_memdup2(tvb + body_start, body_len);
     /*
-     * Process the body
+     * If multipart subtype is encrypted the protcol string was set.
+     *
+     * See MS-WSMV section 2.2.9.1.2.1 "HTTP Headers":
+     *
+     *
+     https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wsmv/b79927c2-96be-4801-aa68-180db95593f9
+     *
+     * There are only 2 body parts possible, and each part has specific
+     * content types.
      */
+    // if(m_info->protocol && idx == 1 && is_raw_data)
+    // {
+    //     gssapi_encrypt_info_t  encrypt;
 
-    {
-    //     gint body_len = boundary_start - body_start;
-    //     tvbuff_t *tmp_tvb = tvb_new_subset_length(tvb, body_start, body_len);
-    //     /*
-    //      * If multipart subtype is encrypted the protcol string was set.
-    //      *
-    //      * See MS-WSMV section 2.2.9.1.2.1 "HTTP Headers":
-    //      *
-    //      *
-    //      https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wsmv/b79927c2-96be-4801-aa68-180db95593f9
-    //      *
-    //      * There are only 2 body parts possible, and each part has specific
-    //      * content types.
-    //      */
-    //     if(m_info->protocol && idx == 1 && is_raw_data)
-    //     {
-    //         gssapi_encrypt_info_t  encrypt;
+    //     memset(&encrypt, 0, sizeof(encrypt));
+    //     encrypt.decrypt_gssapi_tvb=DECRYPT_GSSAPI_NORMAL;
 
-    //         memset(&encrypt, 0, sizeof(encrypt));
-    //         encrypt.decrypt_gssapi_tvb=DECRYPT_GSSAPI_NORMAL;
+    //     dissect_kerberos_encrypted_message(tmp_tvb, pinfo, subtree,
+    //     &encrypt);
 
-    //         dissect_kerberos_encrypted_message(tmp_tvb, pinfo, subtree,
-    //         &encrypt);
-
-    //         if(encrypt.gssapi_decrypted_tvb){
-    //                 tmp_tvb = encrypt.gssapi_decrypted_tvb;
-    //                 is_raw_data = FALSE;
-    //                 content_type_str = m_info->orig_content_type;
-    //                 message_info.media_str = m_info->orig_parameters;
-    //         } else if(encrypt.gssapi_encrypted_tvb) {
-    //                 tmp_tvb = encrypt.gssapi_encrypted_tvb;
-    //                 proto_tree_add_expert(tree, pinfo,
-    //                 &ei_multipart_decryption_not_possible, tmp_tvb, 0, -1);
-    //         }
+    //     if(encrypt.gssapi_decrypted_tvb){
+    //             tmp_tvb = encrypt.gssapi_decrypted_tvb;
+    //             is_raw_data = FALSE;
+    //             content_type_str = m_info->orig_content_type;
+    //             message_info.media_str = m_info->orig_parameters;
+    //     } else if(encrypt.gssapi_encrypted_tvb) {
+    //             tmp_tvb = encrypt.gssapi_encrypted_tvb;
+    //             proto_tree_add_expert(tree, pinfo,
+    //             &ei_multipart_decryption_not_possible, tmp_tvb, 0, -1);
     //     }
+    // }
 
-    //     if (!is_raw_data &&
-    //         content_type_str) {
+    if (!is_raw_data && content_type_str) {
 
-    //         /*
-    //          * subdissection
-    //          */
-    //         gboolean dissected;
+      /*
+       * subdissection
+       */
+      gboolean dissected;
 
-    //         /*
-    //          * Try and remove any content transfer encoding so that each
-    //          sub-dissector
-    //          * doesn't have to do it itself
-    //          *
-    //          */
+      /*
+       * Try and remove any content transfer encoding so that each
+       sub-dissector
+       * doesn't have to do it itself
+       *
+       */
 
-    //         if(content_trans_encoding_str && remove_base64_encoding) {
+      if (content_trans_encoding_str && remove_base64_encoding) {
 
-    //             if(!g_ascii_strncasecmp(content_trans_encoding_str, "base64",
-    //             6))
-    //                 tmp_tvb = base64_decode(pinfo, tmp_tvb, filename ?
-    //                 filename : (mimetypename ? mimetypename :
-    //                 content_type_str));
+        // if(!g_ascii_strncasecmp(content_trans_encoding_str, "base64",
+        // 6))
+        //     tmp_tvb = base64_decode(pinfo, tmp_tvb, filename ?
+        //     filename : (mimetypename ? mimetypename :
+        //     content_type_str));
+      }
 
-    //         }
-
-    //         /*
-    //          * First try the dedicated multipart dissector table
-    //          */
-    //         dissected =
-    //         dissector_try_string(multipart_media_subdissector_table,
-    //                     content_type_str, tmp_tvb, pinfo, subtree,
-    //                     &message_info);
-    //         if (! dissected) {
-    //             /*
-    //              * Fall back to the default media dissector table
-    //              */
-    //             dissected = dissector_try_string(media_type_dissector_table,
-    //                     content_type_str, tmp_tvb, pinfo, subtree,
-    //                     &message_info);
-    //         }
-    //         if (! dissected) {
-    //             const char *save_match_string = pinfo->match_string;
-    //             pinfo->match_string = content_type_str;
-    //             call_dissector_with_data(media_handle, tmp_tvb, pinfo,
-    //             subtree, &message_info); pinfo->match_string =
-    //             save_match_string;
-    //         }
-    //         message_info.media_str = NULL; /* Shares same memory as
-    //         content_type_str */
-    //     } else {
+      /*
+       * First try the dedicated multipart dissector table
+       */
+      // dissected =
+      // dissector_try_string(multipart_media_subdissector_table,
+      //             content_type_str, tmp_tvb, pinfo, subtree,
+      //             &message_info);
+      // if (! dissected) {
+      //     /*
+      //      * Fall back to the default media dissector table
+      //      */
+      //     dissected = dissector_try_string(media_type_dissector_table,
+      //             content_type_str, tmp_tvb, pinfo, subtree,
+      //             &message_info);
+      // }
+      // if (! dissected) {
+      //     const char *save_match_string = pinfo->match_string;
+      //     pinfo->match_string = content_type_str;
+      //     call_dissector_with_data(media_handle, tmp_tvb, pinfo,
+      //     subtree, &message_info); pinfo->match_string =
+      //     save_match_string;
+      // }
+      // message_info.media_str = NULL; /* Shares same memory as
+      // content_type_str */
+    }
+    // else {
     //         call_data_dissector(tmp_tvb, pinfo, subtree);
     //     }
     //     proto_item_set_len(ti, boundary_start - start);
@@ -1118,7 +1233,7 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
  * Call this method to actually dissect the multipart body.
  * NOTE - Only do so if a boundary string has been found!
  */
-static int dissect_multipart(const u_char *tvb, gint tvb_size,
+static int dissect_multipart(const guint8 *tvb, gint tvb_size,
                              guint8 *content_type_str, void *data) {
   http_message_info_t *message_info = (http_message_info_t *)data;
   multipart_info_t *m_info = get_multipart_info(content_type_str, message_info);
@@ -1129,52 +1244,29 @@ static int dissect_multipart(const u_char *tvb, gint tvb_size,
   printf("m_info->boundary: %s\n", m_info->boundary);
   printf("m_info->boundary_length: %d\n", m_info->boundary_length);
 
+  printf("==================================== MIME "
+         "====================================\n");
   /*
    * Process the multipart preamble
    */
   gint header_start = process_preamble(tvb, tvb_size, m_info, &last_boundary);
-  printf("header_start: %d\n", header_start);
 
   gint body_index = 0;
-  header_start = process_body_part(tvb, tvb_size, message_info, m_info,
-                                   header_start, body_index++, &last_boundary);
-  //--------------------------------------------------------------
-  // gint boundary_line_len, next_boundary_offset, temp_offset = 0;
-  // next_boundary_offset = find_next_boundary(
-  //     tvb, tvb_size, 0, (const guint8 *)m_info->boundary,
-  //     m_info->boundary_length, &boundary_line_len, &last_boundary);
-  // printf("-------------------------------------Header boundary: "
-  //        "%d-------------------------------------\n",
-  //        next_boundary_offset + boundary_line_len);
-  //
-  // // print string given start offset and length
-  // printf("%.*s\n", next_boundary_offset - temp_offset, tvb + temp_offset);
-  // temp_offset = next_boundary_offset + boundary_line_len;
-  //
-  // next_boundary_offset = find_next_boundary(
-  //     tvb, tvb_size, next_boundary_offset + boundary_line_len,
-  //     (const guint8 *)m_info->boundary, m_info->boundary_length,
-  //     &boundary_line_len, &last_boundary);
-  // printf("-------------------------------------Body boundary: "
-  //        "%d-------------------------------------\n",
-  //        next_boundary_offset + boundary_line_len);
-  //
-  // printf("%.*s\n", next_boundary_offset - temp_offset, tvb + temp_offset);
-  // temp_offset = next_boundary_offset + boundary_line_len;
-  //
-  // next_boundary_offset = find_next_boundary(
-  //     tvb, tvb_size, next_boundary_offset + boundary_line_len,
-  //     (const guint8 *)m_info->boundary, m_info->boundary_length,
-  //     &boundary_line_len, &last_boundary);
-  // printf("-------------------------------------Last boundary: "
-  //        "%d-------------------------------------\n",
-  //        next_boundary_offset + boundary_line_len);
-  // printf("%.*s\n", next_boundary_offset - temp_offset, tvb + temp_offset);
-  // temp_offset = next_boundary_offset + boundary_line_len;
+
+  /*
+   * Process the encapsulated bodies
+   */
+  while (last_boundary == FALSE) {
+    header_start =
+        process_body_part(tvb, tvb_size, message_info, m_info, header_start,
+                          body_index++, &last_boundary);
+    printf("------------------------------------ boundary "
+           "------------------------------------\n");
+  }
 
   return 1;
 }
-void dissect_imf(const u_char *tvb, size_t tvb_len) {
+void dissect_imf(const guint8 *tvb, size_t tvb_len) {
   guint8 *content_type_str = NULL;
   guint8 *parameters = NULL;
   int hf_id;
@@ -1184,7 +1276,7 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
   gint max_length;
   gchar *key;
   gboolean last_field = FALSE;
-  u_char *next_tvb;
+  guint8 *next_tvb;
   struct imf_field *f_info;
 
   max_length = tvb_len;
@@ -1225,10 +1317,6 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
         if (!g_ascii_isspace(*(tvb + value_offset))) {
           break;
         }
-      // printf("Key: %s\n", key);
-      // // print value with start_offset and end_offset
-      // printf("Value: %.*s", end_offset - start_offset,
-      //        (const char *)tvb + start_offset);
 
       if (value_offset == end_offset) {
         /* empty field - show whole value */
@@ -1246,6 +1334,8 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
                strlen((const char *)content_type_str));
         printf("parameters: %s, len: %ld\n", parameters,
                strlen((const char *)parameters));
+      } else if (f_info->subdissector) {
+        f_info->subdissector(tvb, value_offset, end_offset - value_offset);
       }
     }
 
@@ -1264,6 +1354,7 @@ void dissect_imf(const u_char *tvb, size_t tvb_len) {
     http_message_info_t message_info;
 
     if (FALSE) {
+      next_tvb = (u_char *)tvb + end_offset;
     } else {
       next_tvb = (u_char *)tvb + end_offset;
     }
