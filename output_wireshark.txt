@@ -1,0 +1,58 @@
+********* HASH TABLE (NON-EMPTY ONLY) *********
+Id [763]: 
+Key: 5676399932842470375:
+	Check seq: UP(2126795696->2126803075) DOWN(2934727087->2934727626)
+	|IP: 10.10.1.4 <=> 74.53.140.153, port: 1470 <=> 25
+	|Number of packets = 29, total payload: 7948 bytes
+	|Protocol: TCP
+		p6      [DOWN] Seq: 2934727088, data size:  181
+		p7      [ UP ] Seq: 2126795697, data size:    9
+		p9      [DOWN] Seq: 2934727269, data size:  137
+		p10     [ UP ] Seq: 2126795706, data size:   12
+		p11     [DOWN] Seq: 2934727406, data size:   18
+		p12     [ UP ] Seq: 2126795718, data size:   30
+		p13     [DOWN] Seq: 2934727424, data size:   18
+		p14     [ UP ] Seq: 2126795748, data size:   18
+		p15     [DOWN] Seq: 2934727442, data size:   30
+		p16     [ UP ] Seq: 2126795766, data size:   36
+		p17     [DOWN] Seq: 2934727472, data size:    8
+		p18     [ UP ] Seq: 2126795802, data size:   39
+		p19     [DOWN] Seq: 2934727480, data size:   14
+		p20     [ UP ] Seq: 2126795841, data size:    6
+		p21     [DOWN] Seq: 2934727494, data size:   56
+		p22     [ UP ] Seq: 2126795847, data size: 1460
+		p23     [ UP ] Seq: 2126797307, data size: 1460
+		p24     [ UP ] Seq: 2126798767, data size: 1460
+		p25     [ UP ] Seq: 2126800227, data size: 1460
+		p36     [ UP ] Seq: 2126801655, data size: 1420 (truncated)
+		p38     [ UP ] Seq: 2126803107, data size: 1452
+		p39     [ UP ] Seq: 2126804559, data size: 1452
+		p41     [ UP ] Seq: 2126806011, data size: 1452
+		p42     [ UP ] Seq: 2126807463, data size: 1452
+		p44     [ UP ] Seq: 2126808915, data size: 1452
+		p45     [ UP ] Seq: 2126810367, data size:   29
+		p52     [DOWN] Seq: 2934727550, data size:   28
+		p54     [ UP ] Seq: 2126810396, data size:    6
+		p56     [DOWN] Seq: 2934727578, data size:   48
+
+Id [9276]: 
+Key: 9908211693257771620:
+	Check seq: UP(0->0) DOWN(0->0)
+	|IP: 10.10.1.20 <=> 10.10.1.255, port: 138 <=> 138
+	|Number of packets = 1, total payload: 201 bytes
+	|Protocol: UDP
+		p60     [ UP ] Seq:          0, data size:  201
+
+Id [13303]: 
+Key: 180436501289126783:
+	Check seq: UP(0->0) DOWN(0->0)
+	|IP: 10.10.1.4 <=> 10.10.1.1, port: 56166 <=> 53
+	|Number of packets = 2, total payload: 134 bytes
+	|Protocol: UDP
+		p1      [ UP ] Seq:          0, data size:   34
+		p2      [DOWN] Seq:          0, data size:  100
+
+Number of packets: 60
+Number of flows: 3
+Number of inserted packets: 25
+Number of filtered packets: 0

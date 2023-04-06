@@ -1,0 +1,1662 @@
+Packet # 1
+Time in sec & microsec: 1254722767. 492060
+Full timestamp = Mon 2009-10-05 13:06:07 +07
+### 62 ### 62 ### UDP ### 20 ### 42 ###
+Try inserting packet...
+IP Source: 67176970, IP Destination: 16845322
+Port Source: 56166, Port Destination: 53
+UDP length: 34, Try inserting UDP...
+Finding flowkey = 180436501289126783...
+UDP flow not found, creating new one
+Try inserting UDP to flow...
+First node in list
+Try inserting UDP flow to table...
+New UDP flow created, done inserting UDP
+End of insert function
+Done inserting UDP
+---------------------------------------------------Successfully---------------
+Packet # 2
+Time in sec & microsec: 1254722767. 526085
+Full timestamp = Mon 2009-10-05 13:06:07 +07
+### 128 ### 128 ### UDP ### 20 ### 108 ###
+Try inserting packet...
+IP Source: 16845322, IP Destination: 67176970
+Port Source: 53, Port Destination: 56166
+UDP length: 100, Try inserting UDP...
+Finding flowkey = 180436501289126783...
+Finding node with index = 13303...
+Done searching node with index = 13303...
+Flow found, inserting UDP to flow...
+First node in a direction
+Last node actually...
+Flow found, done inserting UDP
+End of insert function
+Done inserting UDP
+---------------------------------------------------Successfully---------------
+Packet # 3
+Time in sec & microsec: 1254722767. 529046
+Full timestamp = Mon 2009-10-05 13:06:07 +07
+### 48 ### 48 ### TCP ### 20 ### 28 ###
+Pkt_size vs Hdr size: 28,28
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795696, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+TCP flow not found, but SYN flag detected
+TCP got the first flow-up packet
+Checking again init seq = 2126795696 & 0
+Tracking seq = 2126795696 -> 2126795697, ack = 0
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 4
+Time in sec & microsec: 1254722767. 875996
+Full timestamp = Mon 2009-10-05 13:06:07 +07
+### 48 ### 48 ### TCP ### 20 ### 28 ###
+Pkt_size vs Hdr size: 28,28
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727087, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795697) & DOWN(0->0)
+PACKETS BEFORE BEFORE = 0
+SYN/ACK detected
+TCP got the first flow-down packet
+Checking again init seq = 2126795696 & 2934727087
+Tracking seq = 2934727087 -> 2934727088, ack = 2126795697
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727088)
+PACKETS AFTER AFTER = 0
+Checking pointers:
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 5
+Time in sec & microsec: 1254722767. 876028
+Full timestamp = Mon 2009-10-05 13:06:07 +07
+### 40 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795697, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727088)
+PACKETS BEFORE BEFORE = 0
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727088)
+PACKETS AFTER AFTER = 0
+Checking pointers:
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 6
+Time in sec & microsec: 1254722768. 219663
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 221 ### 221 ### TCP ### 20 ### 201 ###
+Pkt_size vs Hdr size: 201,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727088, TCP length: 181, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727088)
+PACKETS BEFORE BEFORE = 0
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2934727088 <= 2934727088 <= 2934727269)
+First node in list
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727269)
+PACKETS AFTER AFTER = 1
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727088
+DOWN -> 2934727088
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 7
+Time in sec & microsec: 1254722768. 224809
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 49 ### 49 ### TCP ### 20 ### 29 ###
+Pkt_size vs Hdr size: 29,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795697, TCP length: 9, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795697) & DOWN(2934727087->2934727269)
+PACKETS BEFORE BEFORE = 1
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2126795697 <= 2126795697 <= 2126795706)
+First node in a direction
+Last node actually...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727269)
+PACKETS AFTER AFTER = 2
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795697
+UP -> 2126795697
+DOWN -> 2934727088
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 8
+Time in sec & microsec: 1254722768. 565386
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727269, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727269)
+PACKETS BEFORE BEFORE = 2
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727269)
+PACKETS AFTER AFTER = 2
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795697
+UP -> 2126795697
+DOWN -> 2934727088
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 9
+Time in sec & microsec: 1254722768. 566183
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 177 ### 177 ### TCP ### 20 ### 157 ###
+Pkt_size vs Hdr size: 157,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727269, TCP length: 137, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727269)
+PACKETS BEFORE BEFORE = 2
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727088
+TCP inserted: New payload: SEQ(2934727269 <= 2934727269 <= 2934727406)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727406)
+PACKETS AFTER AFTER = 3
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727269
+UP -> 2126795697
+DOWN -> 2934727269
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 10
+Time in sec & microsec: 1254722768. 568729
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 52 ### 52 ### TCP ### 20 ### 32 ###
+Pkt_size vs Hdr size: 32,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795706, TCP length: 12, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795706) & DOWN(2934727087->2934727406)
+PACKETS BEFORE BEFORE = 3
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795697
+TCP inserted: New payload: SEQ(2126795706 <= 2126795706 <= 2126795718)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795718) & DOWN(2934727087->2934727406)
+PACKETS AFTER AFTER = 4
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795706
+UP -> 2126795706
+DOWN -> 2934727269
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 11
+Time in sec & microsec: 1254722768. 911081
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 58 ### 58 ### TCP ### 20 ### 38 ###
+Pkt_size vs Hdr size: 38,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727406, TCP length: 18, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795718) & DOWN(2934727087->2934727406)
+PACKETS BEFORE BEFORE = 4
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727269
+TCP inserted: New payload: SEQ(2934727406 <= 2934727406 <= 2934727424)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795718) & DOWN(2934727087->2934727424)
+PACKETS AFTER AFTER = 5
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727406
+UP -> 2126795706
+DOWN -> 2934727406
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 12
+Time in sec & microsec: 1254722768. 911655
+Full timestamp = Mon 2009-10-05 13:06:08 +07
+### 70 ### 70 ### TCP ### 20 ### 50 ###
+Pkt_size vs Hdr size: 50,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795718, TCP length: 30, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795718) & DOWN(2934727087->2934727424)
+PACKETS BEFORE BEFORE = 5
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795706
+TCP inserted: New payload: SEQ(2126795718 <= 2126795718 <= 2126795748)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795748) & DOWN(2934727087->2934727424)
+PACKETS AFTER AFTER = 6
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795718
+UP -> 2126795718
+DOWN -> 2934727406
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 13
+Time in sec & microsec: 1254722769. 253544
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 58 ### 58 ### TCP ### 20 ### 38 ###
+Pkt_size vs Hdr size: 38,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727424, TCP length: 18, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795748) & DOWN(2934727087->2934727424)
+PACKETS BEFORE BEFORE = 6
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727406
+TCP inserted: New payload: SEQ(2934727424 <= 2934727424 <= 2934727442)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795748) & DOWN(2934727087->2934727442)
+PACKETS AFTER AFTER = 7
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727424
+UP -> 2126795718
+DOWN -> 2934727424
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 14
+Time in sec & microsec: 1254722769. 254118
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 58 ### 58 ### TCP ### 20 ### 38 ###
+Pkt_size vs Hdr size: 38,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795748, TCP length: 18, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795748) & DOWN(2934727087->2934727442)
+PACKETS BEFORE BEFORE = 7
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795718
+TCP inserted: New payload: SEQ(2126795748 <= 2126795748 <= 2126795766)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795766) & DOWN(2934727087->2934727442)
+PACKETS AFTER AFTER = 8
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795748
+UP -> 2126795748
+DOWN -> 2934727424
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 15
+Time in sec & microsec: 1254722769. 613798
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 70 ### 70 ### TCP ### 20 ### 50 ###
+Pkt_size vs Hdr size: 50,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727442, TCP length: 30, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795766) & DOWN(2934727087->2934727442)
+PACKETS BEFORE BEFORE = 8
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727424
+TCP inserted: New payload: SEQ(2934727442 <= 2934727442 <= 2934727472)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795766) & DOWN(2934727087->2934727472)
+PACKETS AFTER AFTER = 9
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727442
+UP -> 2126795748
+DOWN -> 2934727442
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 16
+Time in sec & microsec: 1254722769. 614414
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 76 ### 76 ### TCP ### 20 ### 56 ###
+Pkt_size vs Hdr size: 56,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795766, TCP length: 36, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795766) & DOWN(2934727087->2934727472)
+PACKETS BEFORE BEFORE = 9
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795748
+TCP inserted: New payload: SEQ(2126795766 <= 2126795766 <= 2126795802)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795802) & DOWN(2934727087->2934727472)
+PACKETS AFTER AFTER = 10
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795766
+UP -> 2126795766
+DOWN -> 2934727442
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 17
+Time in sec & microsec: 1254722769. 956765
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 48 ### 48 ### TCP ### 20 ### 28 ###
+Pkt_size vs Hdr size: 28,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727472, TCP length: 8, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795802) & DOWN(2934727087->2934727472)
+PACKETS BEFORE BEFORE = 10
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727442
+TCP inserted: New payload: SEQ(2934727472 <= 2934727472 <= 2934727480)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795802) & DOWN(2934727087->2934727480)
+PACKETS AFTER AFTER = 11
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727472
+UP -> 2126795766
+DOWN -> 2934727472
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 18
+Time in sec & microsec: 1254722769. 957250
+Full timestamp = Mon 2009-10-05 13:06:09 +07
+### 79 ### 79 ### TCP ### 20 ### 59 ###
+Pkt_size vs Hdr size: 59,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795802, TCP length: 39, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795802) & DOWN(2934727087->2934727480)
+PACKETS BEFORE BEFORE = 11
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795766
+TCP inserted: New payload: SEQ(2126795802 <= 2126795802 <= 2126795841)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795841) & DOWN(2934727087->2934727480)
+PACKETS AFTER AFTER = 12
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795802
+UP -> 2126795802
+DOWN -> 2934727472
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 19
+Time in sec & microsec: 1254722770. 319708
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 54 ### 54 ### TCP ### 20 ### 34 ###
+Pkt_size vs Hdr size: 34,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727480, TCP length: 14, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795841) & DOWN(2934727087->2934727480)
+PACKETS BEFORE BEFORE = 12
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727472
+TCP inserted: New payload: SEQ(2934727480 <= 2934727480 <= 2934727494)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795841) & DOWN(2934727087->2934727494)
+PACKETS AFTER AFTER = 13
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727480
+UP -> 2126795802
+DOWN -> 2934727480
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 20
+Time in sec & microsec: 1254722770. 320203
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 46 ### 46 ### TCP ### 20 ### 26 ###
+Pkt_size vs Hdr size: 26,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795841, TCP length: 6, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795841) & DOWN(2934727087->2934727494)
+PACKETS BEFORE BEFORE = 13
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795802
+TCP inserted: New payload: SEQ(2126795841 <= 2126795841 <= 2126795847)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795847) & DOWN(2934727087->2934727494)
+PACKETS AFTER AFTER = 14
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795841
+UP -> 2126795841
+DOWN -> 2934727480
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 21
+Time in sec & microsec: 1254722770. 661679
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 96 ### 96 ### TCP ### 20 ### 76 ###
+Pkt_size vs Hdr size: 76,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727494, TCP length: 56, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795847) & DOWN(2934727087->2934727494)
+PACKETS BEFORE BEFORE = 14
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727480
+TCP inserted: New payload: SEQ(2934727494 <= 2934727494 <= 2934727550)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126795847) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 15
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727494
+UP -> 2126795841
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 22
+Time in sec & microsec: 1254722770. 692743
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 1500 ### 1500 ### TCP ### 20 ### 1480 ###
+Pkt_size vs Hdr size: 1480,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795847, TCP length: 1460, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126795847) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 15
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126795841
+TCP inserted: New payload: SEQ(2126795847 <= 2126795847 <= 2126797307)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126797307) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 16
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126795847
+UP -> 2126795847
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 23
+Time in sec & microsec: 1254722770. 692786
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 1500 ### 1500 ### TCP ### 20 ### 1480 ###
+Pkt_size vs Hdr size: 1480,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126797307, TCP length: 1460, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126797307) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 16
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2126797307 <= 2126797307 <= 2126798767)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126798767) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 17
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126797307
+UP -> 2126797307
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 24
+Time in sec & microsec: 1254722770. 692804
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 1500 ### 1500 ### TCP ### 20 ### 1480 ###
+Pkt_size vs Hdr size: 1480,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126798767, TCP length: 1460, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126798767) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 17
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2126798767 <= 2126798767 <= 2126800227)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126800227) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 18
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126798767
+UP -> 2126798767
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 25
+Time in sec & microsec: 1254722770. 692823
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 1500 ### 1500 ### TCP ### 20 ### 1480 ###
+Pkt_size vs Hdr size: 1480,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126800227, TCP length: 1460, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126800227) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 18
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2126800227 <= 2126800227 <= 2126801687)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 26
+Time in sec & microsec: 1254722770. 695115
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+ERROR: Segment is not valid!
+---------------------------------------------------PacketFailed---------------
+Packet # 27
+Time in sec & microsec: 1254722770. 695170
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126795847, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+Payload detected. Try inserting...
+Verify packets first...
+TCP not inserted: SEQ(2126795847 <= 2126801687 <= 2126797299) -> Payload already in flow
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 28
+Time in sec & microsec: 1254722770. 695623
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+ERROR: Segment is not valid!
+---------------------------------------------------PacketFailed---------------
+Packet # 29
+Time in sec & microsec: 1254722770. 696248
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+ERROR: Segment is not valid!
+---------------------------------------------------PacketFailed---------------
+Packet # 30
+Time in sec & microsec: 1254722770. 696634
+Full timestamp = Mon 2009-10-05 13:06:10 +07
+ERROR: Segment is not valid!
+---------------------------------------------------PacketFailed---------------
+Packet # 31
+Time in sec & microsec: 1254722771. 104941
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 32
+Time in sec & microsec: 1254722771. 104972
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126797299, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+Payload detected. Try inserting...
+Verify packets first...
+TCP not inserted: SEQ(2126797299 <= 2126801687 <= 2126798751) -> Payload already in flow
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 33
+Time in sec & microsec: 1254722771. 104998
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126798751, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+Payload detected. Try inserting...
+Verify packets first...
+TCP not inserted: SEQ(2126798751 <= 2126801687 <= 2126800203) -> Payload already in flow
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 34
+Time in sec & microsec: 1254722771. 469723
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 35
+Time in sec & microsec: 1254722771. 469759
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126800203, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+Payload detected. Try inserting...
+Verify packets first...
+TCP not inserted: SEQ(2126800203 <= 2126801687 <= 2126801655) -> Payload already in flow
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 19
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126800227
+UP -> 2126800227
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 36
+Time in sec & microsec: 1254722771. 469814
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126801655, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126801687) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 19
+Payload detected. Try inserting...
+Verify packets first...
+TCP inserted: New payload: SEQ(2126801655 <= 2126801687 <= 2126803107)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 20
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126801655
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 37
+Time in sec & microsec: 1254722771. 494167
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 20
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 20
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126801655
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 38
+Time in sec & microsec: 1254722771. 494181
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126803107, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 20
+Payload detected. Try inserting...
+Verify packets first...
+TCP may not be inserted: SEQ(2126803107 <= 2126803075 <= 2126804559)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 21
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126803107
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 39
+Time in sec & microsec: 1254722771. 494199
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126804559, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 21
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126804559 <= 2126803075 <= 2126806011)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 22
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126804559
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 40
+Time in sec & microsec: 1254722771. 834595
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 22
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 22
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126804559
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 41
+Time in sec & microsec: 1254722771. 834628
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126806011, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 22
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126806011 <= 2126803075 <= 2126807463)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 23
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126806011
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 42
+Time in sec & microsec: 1254722771. 834655
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126807463, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 23
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126807463 <= 2126803075 <= 2126808915)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 24
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126807463
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 43
+Time in sec & microsec: 1254722771. 858301
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 24
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 24
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126807463
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 44
+Time in sec & microsec: 1254722771. 858316
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 1492 ### 1492 ### TCP ### 20 ### 1472 ###
+Pkt_size vs Hdr size: 1472,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126808915, TCP length: 1452, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 24
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126808915 <= 2126803075 <= 2126810367)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 25
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126808915
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 45
+Time in sec & microsec: 1254722771. 858334
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 69 ### 69 ### TCP ### 20 ### 49 ###
+Pkt_size vs Hdr size: 49,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126810367, TCP length: 29, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 25
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126810367 <= 2126803075 <= 2126810396)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 46
+Time in sec & microsec: 1254722771. 881223
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 47
+Time in sec & microsec: 1254722771. 905583
+Full timestamp = Mon 2009-10-05 13:06:11 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 48
+Time in sec & microsec: 1254722772. 200179
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 49
+Time in sec & microsec: 1254722772. 222746
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 50
+Time in sec & microsec: 1254722772. 246844
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 51
+Time in sec & microsec: 1254722772. 248291
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS AFTER AFTER = 26
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810367
+UP -> 2126801655
+DOWN -> 2934727494
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 52
+Time in sec & microsec: 1254722772. 248789
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 68 ### 68 ### TCP ### 20 ### 48 ###
+Pkt_size vs Hdr size: 48,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727550, TCP length: 28, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727550)
+PACKETS BEFORE BEFORE = 26
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727494
+Track pointer -> 2126795847
+Track pointer -> 2126797307
+Track pointer -> 2126798767
+Track pointer -> 2126800227
+Track pointer -> 2126801655
+Track pointer -> 2126803107
+Track pointer -> 2126804559
+Track pointer -> 2126806011
+Track pointer -> 2126807463
+Track pointer -> 2126808915
+TCP inserted: New payload: SEQ(2934727550 <= 2934727550 <= 2934727578)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS AFTER AFTER = 27
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727550
+UP -> 2126801655
+DOWN -> 2934727550
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 53
+Time in sec & microsec: 1254722772. 387595
+Full timestamp = Mon 2009-10-05 13:06:12 +07
+### 40 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126810396, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS BEFORE BEFORE = 27
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS AFTER AFTER = 27
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727550
+UP -> 2126801655
+DOWN -> 2934727550
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 54
+Time in sec & microsec: 1254722774. 763825
+Full timestamp = Mon 2009-10-05 13:06:14 +07
+### 46 ### 46 ### TCP ### 20 ### 26 ###
+Pkt_size vs Hdr size: 26,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126810396, TCP length: 6, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS BEFORE BEFORE = 27
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2126801655
+TCP may not be inserted: SEQ(2126810396 <= 2126803075 <= 2126810402)
+ -> The sequence is higher
+Last node actually...
+Verify packets first...
+Track pointer -> 2126801655
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS AFTER AFTER = 28
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810396
+UP -> 2126801655
+DOWN -> 2934727550
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 55
+Time in sec & microsec: 1254722774. 764576
+Full timestamp = Mon 2009-10-05 13:06:14 +07
+### 40 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126810402, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS BEFORE BEFORE = 28
+FIN(ACK) detected, closing flow...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS AFTER AFTER = 28
+Checking pointers:
+Head -> 2934727088
+Tail -> 2126810396
+UP -> 2126801655
+DOWN -> 2934727550
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 56
+Time in sec & microsec: 1254722775. 105467
+Full timestamp = Mon 2009-10-05 13:06:15 +07
+### 88 ### 88 ### TCP ### 20 ### 68 ###
+Pkt_size vs Hdr size: 68,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727578, TCP length: 48, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727578)
+PACKETS BEFORE BEFORE = 28
+Payload detected. Try inserting...
+Verify packets first...
+Track pointer -> 2934727550
+TCP inserted: New payload: SEQ(2934727578 <= 2934727578 <= 2934727626)
+~~~TRY INSERTING...
+Verify packets first...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS AFTER AFTER = 29
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727578
+UP -> 2126801655
+DOWN -> 2934727578
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 57
+Time in sec & microsec: 1254722775. 105999
+Full timestamp = Mon 2009-10-05 13:06:15 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727626, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS BEFORE BEFORE = 29
+FIN(ACK) detected, closing flow...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS AFTER AFTER = 29
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727578
+UP -> 2126801655
+DOWN -> 2934727578
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 58
+Time in sec & microsec: 1254722775. 106015
+Full timestamp = Mon 2009-10-05 13:06:15 +07
+### 40 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 67176970, IP Destination: 2576102730
+Port Source: 1470, Port Destination: 25
+TCP seq: 2126810403, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS BEFORE BEFORE = 29
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS AFTER AFTER = 29
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727578
+UP -> 2126801655
+DOWN -> 2934727578
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 59
+Time in sec & microsec: 1254722775. 106759
+Full timestamp = Mon 2009-10-05 13:06:15 +07
+### 46 ### 40 ### TCP ### 20 ### 20 ###
+Pkt_size vs Hdr size: 20,20
+Try inserting packet...
+IP Source: 2576102730, IP Destination: 67176970
+Port Source: 25, Port Destination: 1470
+TCP seq: 2934727627, TCP length: 0, Try inserting TCP...
+Finding flowkey = 5676399932842470375...
+Finding node with index = 763...
+Done searching node with index = 763...
+---BEFORE INSERTING---
+Checking seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS BEFORE BEFORE = 29
+ACK detected & no payload, temporarily ignoring...
+---AFTER INSERTING---
+Checking again first seq = UP(2126795696->2126803075) & DOWN(2934727087->2934727626)
+PACKETS AFTER AFTER = 29
+Checking pointers:
+Head -> 2934727088
+Tail -> 2934727578
+UP -> 2126801655
+DOWN -> 2934727578
+End of insert function
+Done inserting TCP
+---------------------------------------------------Successfully---------------
+Packet # 60
+Time in sec & microsec: 1254722776. 690444
+Full timestamp = Mon 2009-10-05 13:06:16 +07
+### 229 ### 229 ### UDP ### 20 ### 209 ###
+Try inserting packet...
+IP Source: 335612426, IP Destination: 4278258186
+Port Source: 138, Port Destination: 138
+UDP length: 201, Try inserting UDP...
+Finding flowkey = 9908211693257771620...
+UDP flow not found, creating new one
+Try inserting UDP to flow...
+First node in list
+Try inserting UDP flow to table...
+New UDP flow created, done inserting UDP
+End of insert function
+Done inserting UDP
+---------------------------------------------------Successfully---------------

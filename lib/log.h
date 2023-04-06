@@ -9,7 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <glib.h>
+#include <glib-2.0/glib.h>
 
 #include <pcap.h>
 #include <netinet/in.h>
@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "smtp.pcap"
+#define PCAP_FILE "data/smtp.pcap"
 
 /* These below are just for debug */
 #define DBG_ALL 1
