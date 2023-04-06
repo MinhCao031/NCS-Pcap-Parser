@@ -251,7 +251,7 @@ flow_base_t create_flow(parsed_packet pkt, FILE* stream) {
       .init_seq = {0, 0},
       .next_seq = {0, 0},
       .total_payload = pkt.payload.data_len,
-      .track_flow = NULL,
+      .track_flow = calloc(2, sizeof(Node*)),
     };
 }
 
