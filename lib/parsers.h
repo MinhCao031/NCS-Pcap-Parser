@@ -8,9 +8,10 @@ extern uint32_t inserted_packets;
 extern uint32_t filtered_packets;
 
 typedef struct {
-  uint32_t index;
+  uint32_t index; // index of packet in wireshark file
   uint16_t data_len;
-  uint16_t is_up;
+  uint8_t is_up;
+  uint8_t is_truncated;
   u_char const *data;
 } parsed_payload;
 

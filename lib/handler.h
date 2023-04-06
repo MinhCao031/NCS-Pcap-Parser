@@ -10,7 +10,7 @@ uint64_t get_flow_key(uint64_t x1, uint64_t x2, uint64_t y1, uint64_t y2);
 Node *create_flow_node(uint64_t key, flow_base_t flow, FILE *stream);
 
 // create a node of payload
-Node *create_payload_node(parsed_packet pkt, bool is_pkt_up);
+Node *create_payload_node(parsed_packet pkt, bool is_pkt_up, uint32_t skip_byte);
 
 // create new flow from packet info and initialize flow direction
 flow_base_t create_flow(parsed_packet pkt, FILE *stream);

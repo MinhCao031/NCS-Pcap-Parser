@@ -3,10 +3,8 @@
 
 #include "flow_api.h"
 
-
-
 typedef struct {
-  size_t size;
+  uint32_t size;
   Node **lists;
 } HashTable;
 
@@ -15,13 +13,13 @@ typedef struct {
 enum InsertAlgorihm { FIRST = 0, LAST = 1, ASC = 2, DESC = 3 };
 
 // Hash function
-uint32_t hash(uint64_t x, size_t len);
+uint32_t hash(uint64_t x, uint64_t len);
 
 // free a hashtable
 void free_hash_table(HashTable table);
 
 // create a hash table
-HashTable create_hash_table(size_t size);
+HashTable create_hash_table(uint64_t size);
 
 // insert a new flow into the hash table
 void insert_new_flow(HashTable table, Node *const flow_node);

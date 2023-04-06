@@ -78,6 +78,33 @@ void insert_node_desc(Node **head, Node *const node, FILE* stream) {
   n->next = node;
 }
 
+void insert_payload_asc(Node **head, Node **tail, Node *const node, FILE* stream) {
+  uint8_t node_direction = ((parsed_payload*)(node->value))->is_up;
+  LOG_DBG(stream, DBG_PARSER, "~~~TRY INSERTING...\n");/**/
+  Node *n = *head;
+
+  if (n == NULL) {
+    *head = node;
+    LOG_DBG(stream, DBG_PARSER, "~~~HEAD IS NULL\n");/**/
+    return;
+  }
+  while (n->next != NULL) {
+    uint8_t n_direction = ((parsed_payload*)(n->next->value))->is_up;
+    if ((int)(n->next->key - node->key) > 0 && n_direction == node_direction) {
+      node->next = n->next;
+      n->next = node;
+      *head = node;
+      LOG_DBG(stream, DBG_PARSER, "~~~FOUND PLACE TO INSERT\n");/**/
+      return;
+    }
+    n = n->next;
+  }
+  n->next = node;
+  *head = node;
+  *tail = node;
+}
+
+
 // insert node by order asc (key) in the list
 void insert_node_asc(Node **head, Node *const node, FILE* stream) {
   LOG_DBG(stream, DBG_PARSER, "Try inserting...\n");/**/
