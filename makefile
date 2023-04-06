@@ -15,7 +15,7 @@ INCLUDED += lib/ws/wsutil/str_util.c lib/ws/wsutil/wmem/wmem_strbuf.c ./lib/ws/w
 LINKLIBS +=	-lpcap -lm
 
 # Should be the last argument
-SOURCE = test
+SOURCE = main
 SOURCE_CODE = $(SOURCE).c
 OUTPFILE += $(SOURCE)
 

@@ -103,7 +103,6 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     // );
 
     progress_pkt += 1;
-    PROCESS_PACKET_TIME(50000);
     LOG_DBG(fout_parser, DBG_PARSER,
       "----------------------------------------"
       "-----------Successfully---------------\n");
@@ -111,15 +110,12 @@ void get_packets(pcap_t *handler, FILE* fout_parser, FILE* fout_seq_filter, FILE
     continue;
 
     END: {
-      PROCESS_PACKET_TIME(50000);
       LOG_DBG(fout_parser, DBG_PARSER,
         "----------------------------------------"
         "-----------PacketFailed---------------\n");
       if (captured_packets > LIMIT_PACKET) break;
     }
   }
-
-  STATISTIC_PACKET_TIME;
 
   // Print HashTable
   print_hashtable(table, fout_list_flow);
