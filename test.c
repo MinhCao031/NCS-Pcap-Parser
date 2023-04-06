@@ -1,8 +1,8 @@
-#include "lib/dissect_imf.h"
 #include "lib/dissect_smtp.h"
 #include "lib/handler.h"
+#include "lib/dissect_imf.h"
 
-void flow_browser(flow_base_t *flow) {
+void flow_browser(flow_base_t  * flow) {
 
   if (flow == NULL) {
     printf("ERROR: flow is null\n");
@@ -32,17 +32,17 @@ void flow_browser(flow_base_t *flow) {
   u_char *defragment = NULL;
   // print fragments
   if (smtp_info->num_fragments > 0) {
-    // printf("User: %s\n", smtp_info->username);
-    // printf("Password: %s\n", smtp_info->password);
-    // printf("Num Fragments: %d\n", smtp_info->num_fragments);
-    // printf("Content length: %ld\n", smtp_info->defragment_size);
-    // printf("Fragments:\n");
+     printf("User: %s\n", smtp_info->username);
+     printf("Password: %s\n", smtp_info->password);
+     printf("Num Fragments: %d\n", smtp_info->num_fragments);
+     printf("Content length: %ld\n", smtp_info->defragment_size);
+     printf("Fragments:\n");
 
-    // // print all fragments in smtp_info->fragments, note that this is GSList
-    // for (GSList *temp = smtp_info->fragments; temp != NULL; temp =
-    // temp->next) {
-    //   printf("%s\n", (char *)temp->data);
-    // }
+     // print all fragments in smtp_info->fragments, note that this is GSList
+     for (GSList *temp = smtp_info->fragments; temp != NULL; temp =
+     temp->next) {
+       printf("%s\n", (char *)temp->data);
+     }
 
     // merge all fragments in smtp_info->fragments to one string
     defragment = g_malloc(smtp_info->defragment_size + 1);
@@ -59,7 +59,7 @@ void flow_browser(flow_base_t *flow) {
     // printf("%s\n", defragment);
   }
 
-  dissect_imf(defragment, smtp_info->defragment_size);
+  // dissect_imf(defragment, smtp_info->defragment_size);
 }
 
 void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
@@ -165,8 +165,8 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
 
   print_hashtable(table, fout_list_flow);
 
-  flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
-  flow_browser(flow_test);
+  flow_base_t *flow_test = search_flow(table, 5676399932842470375, stdout);
+  // flow_browser(flow_test);
 
   printf("\nFreeing...\n");
   free_hash_table(table);

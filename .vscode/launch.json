@@ -10,23 +10,26 @@
             "request": "launch",
             "program": "${workspaceFolder}/main.o",
             "coreDumpPath": "${input:coreFileName}",
-            "cwd": "${fileDirname}",            
+            "cwd": "${fileDirname}",
             "MIMode": "gdb"
         },
         {
             "name": "Debug C/C++ program",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/main.o",
-            "args": [],
+            "program": "${workspaceFolder}/build/run/tshark",
+            "args": [
+                "-r",
+                "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/smtp.pcap",
+            ],
             "cwd": "${workspaceFolder}",
         }
     ],
     "inputs": [
         {
-          "id": "coreFileName",
-          "type": "promptString",
-          "description": "Enter core file path"
+            "id": "coreFileName",
+            "type": "promptString",
+            "description": "Enter core file path"
         }
-      ]
+    ]
 }

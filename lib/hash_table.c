@@ -1,6 +1,5 @@
 #include "hash_table.h"
 
-
 // hash function
 uint32_t hash(uint64_t x, uint64_t len) {
   x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -24,13 +23,15 @@ void insert_new_flow(HashTable table, Node *const flow_node) {
 }
 
 // insert a packet data to a flow
-void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_base_t* flow, FILE* stream) {
-  if (!flow) return;
+void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
+                    flow_base_t *flow, FILE *stream) {
+  if (!flow)
+    return;
 
   if (!(flow->head_flow)) {
-    flow->head_flow = malloc(sizeof(Node*));
+    flow->head_flow = malloc(sizeof(Node *));
     flow->head_flow = pkt_node;
-    flow->tail_flow = malloc(sizeof(Node*));
+    flow->tail_flow = malloc(sizeof(Node *));
     flow->tail_flow = pkt_node;
     LOG_DBG(stream, DBG_PARSER, "First node in list\n");
     return;
@@ -54,7 +55,7 @@ void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_
 }
 
 // search flow by key in the hash table
-flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream) {
+flow_base_t *search_flow(HashTable const table, uint64_t key, FILE *stream) {
   uint32_t index = hash(key, table.size);
   Node *head_flow = table.lists[index];
 
@@ -63,49 +64,52 @@ flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream) {
   } else {
     LOG_DBG(stream, DBG_PARSER, "Finding node with index = %d...\n", index);
     Node *n = search_node(head_flow, key);
-    LOG_DBG(stream, DBG_PARSER, "Done searching node with index = %d...\n", index);
+    LOG_DBG(stream, DBG_PARSER, "Done searching node with index = %d...\n",
+            index);
     return !n ? NULL : (flow_base_t *)n->value;
   }
 }
 
 // remove flow from hash table
 void delete_flow(HashTable table, uint64_t key) {
-  printf("WARNING: You're trying to use function delete_flow, which doesn't work and will be abandoned\n");
-//   uint32_t index = hash(key, table.size);
-//   Node *n = table.lists[index];
-//   delete_node(&n, key, NULL);
+  printf("WARNING: You're trying to use function delete_flow, which doesn't "
+         "work and will be abandoned\n");
+  //   uint32_t index = hash(key, table.size);
+  //   Node *n = table.lists[index];
+  //   delete_node(&n, key, NULL);
 
-//   if (n == NULL) {
-//     return;
-//   }
+  //   if (n == NULL) {
+  //     return;
+  //   }
 
-//   // find the flow node by key then free all package nodes in the flow, then
-//   // delete flow node
-//   if (n->key == key) {
-//     free_flow_direction(((flow_base_t *)n->value)->flow_down);
-//     free_flow_direction(((flow_base_t *)n->value)->flow_up);
-//     table.lists[index] = n->next;
-//     free_node(n);
-//   } else {
-//     while (n->next != NULL) {
-//       if (n->next->key == key) {
-//         free_flow_direction(((flow_base_t *)n->next->value)->flow_down);
-//         free_flow_direction(((flow_base_t *)n->next->value)->flow_up);
-//         Node *tmp = n->next;
-//         n->next = n->next->next;
-//         free_node(tmp);
-//         return;
-//       }
-//       n = n->next;
-//     }
-//   }
-//   printf("flow with key %ld not found to delete\n", key);
+  //   // find the flow node by key then free all package nodes in the flow,
+  //   then
+  //   // delete flow node
+  //   if (n->key == key) {
+  //     free_flow_direction(((flow_base_t *)n->value)->flow_down);
+  //     free_flow_direction(((flow_base_t *)n->value)->flow_up);
+  //     table.lists[index] = n->next;
+  //     free_node(n);
+  //   } else {
+  //     while (n->next != NULL) {
+  //       if (n->next->key == key) {
+  //         free_flow_direction(((flow_base_t *)n->next->value)->flow_down);
+  //         free_flow_direction(((flow_base_t *)n->next->value)->flow_up);
+  //         Node *tmp = n->next;
+  //         n->next = n->next->next;
+  //         free_node(tmp);
+  //         return;
+  //       }
+  //       n = n->next;
+  //     }
+  //   }
+  //   printf("flow with key %ld not found to delete\n", key);
 }
 
 // free hash table
 void free_hash_table(HashTable table) {
   for (uint32_t i = 0; i < table.size; i++) {
-    Node* flow_temp = table.lists[i];
+    Node *flow_temp = table.lists[i];
     if (flow_temp != NULL) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
@@ -120,8 +124,6 @@ void free_hash_table(HashTable table) {
   free(table.lists);
 }
 
-
-
 // Get number of packets in hash table
 uint32_t count_packets(HashTable const table) {
 
@@ -131,7 +133,7 @@ uint32_t count_packets(HashTable const table) {
   for (size_t i = 0; i < table.size; i++) {
     node_flow_temp = table.lists[i];
     while (node_flow_temp != NULL) {
-      flow_base_t* flow_temp = ((flow_base_t *)node_flow_temp->value);
+      flow_base_t *flow_temp = ((flow_base_t *)node_flow_temp->value);
       // Node *flow_down_temp = flow_temp->flow_down;
       // count += get_list_size(flow_down_temp);
       // Node *flow_up_temp = flow_temp->flow_up;
@@ -177,7 +179,8 @@ void free_payload_node(Node *payload_node) {
 
 // free all nodes in a flow
 void free_flow_direction(Node *flow_direction) {
-  if (!flow_direction) return;
+  if (!flow_direction)
+    return;
 
   Node *temp = flow_direction;
   while (temp != NULL) {

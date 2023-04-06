@@ -20,7 +20,7 @@
 
 #pragma once
 
-#define PCAP_FILE "data/sendFile.pcapng"
+#define PCAP_FILE "data/smtp.pcap"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -33,7 +33,7 @@
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 1)
+#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
 // 1 to print to console, otherwise 0
 #define DBG_CONSOLE (DBG_ALL & 1)
 
