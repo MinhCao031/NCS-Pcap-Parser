@@ -631,10 +631,20 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
             g_slist_append(smtp_info->fragments, (guchar *)tvb);
         smtp_info->num_fragments++;
         smtp_info->defragment_size += tvb_size;
+        printf("\tSize of defragmented message: %d\n",tvb_size);
       }
       break;
     case SMTP_PDU_EOM:
       printf("\tEOM seen\n");
+      if (loffset) {
+        // add tvb to fragments list in smtp_info
+        smtp_info->fragments =
+            g_slist_append(smtp_info->fragments, (guchar *)tvb);
+        smtp_info->num_fragments++;
+        // ignore the EOM in the defragmented message, so the size is loffset, not tvb_size
+        smtp_info->defragment_size += loffset;
+        printf("\tSize of defragmented message: %d\n",tvb_size);
+      }
       break;
     case SMTP_PDU_CMD:
 
@@ -657,11 +667,13 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
 
           // copy decrypt to session_state->username
           smtp_info->username = (guint8 *)g_malloc(linelen + 1);
+          smtp_info->username[linelen]= '\0';
           memcpy(smtp_info->username, tvb, linelen);
         } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_RSP) {
 
           // copy decrypt to session_state->password
           smtp_info->password = (guint8 *)g_malloc(linelen + 1);
+          smtp_info->password[linelen]= '\0';
           memcpy(smtp_info->password, tvb, linelen);
         }
 

@@ -1,4 +1,4 @@
-CC = clang-15
+CC = gcc
 OPTIMIZE +=	-O3
 DEBUG    +=	-g
 DEFINES +=	-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
@@ -15,7 +15,7 @@ INCLUDED += lib/ws/wsutil/str_util.c lib/ws/wsutil/wmem/wmem_strbuf.c ./lib/ws/w
 LINKLIBS +=	-lpcap -lm
 
 # Should be the last argument
-SOURCE = main
+SOURCE = test
 SOURCE_CODE = $(SOURCE).c
 OUTPFILE += $(SOURCE)
 

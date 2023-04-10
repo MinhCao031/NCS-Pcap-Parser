@@ -3,7 +3,7 @@
 
 #include "dissect_smtp.h"
 #include <glib-2.0/glib.h>
-#include <glib-2.0/glibconfig.h>
+// #include <glib-2.0/glibconfig.h>
 
 #include "ws/wsutil/str_util.h"
 #define PNAME "Internet Message Format"
@@ -87,7 +87,7 @@ static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
     /* we can't find an angle bracket - the whole field is therefore the address
      */
 
-    printf("\taddress: %.*s\n",length, tvb + offset);
+    printf("\taddress: %.*s\n", length, tvb + offset);
 
   } else {
     /* we can find an angle bracket - let's see if we can find a display name */
@@ -102,9 +102,8 @@ static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
     end_pos =
         tvb_find_char(tvb, addr_pos + 1, length - (addr_pos + 1 - offset), '>');
 
-        // print address string with length
-    printf("\taddress: %.*s\n",end_pos - addr_pos - 1, tvb + addr_pos + 1);
-
+    // print address string with length
+    printf("\taddress: %.*s\n", end_pos - addr_pos - 1, tvb + addr_pos + 1);
   }
 };
 static void dissect_imf_address(const guint8 *tvb, int offset, gint length) {
@@ -170,23 +169,24 @@ static void dissect_imf_address_list(const guint8 *tvb, int offset,
   // proto_item_append_text(item, ", %d item%s", count, plurality(count, "",
   // "s"));
 }
-static void dissect_imf_mailbox_list(const guint8 *tvb, int offset, gint length){
+static void dissect_imf_mailbox_list(const guint8 *tvb, int offset,
+                                     gint length) {
 
-  int         count = 0;
-  int         item_offset;
-  int         end_offset;
-  int         item_length;
-
+  int count = 0;
+  int item_offset;
+  int end_offset;
+  int item_length;
 
   item_offset = offset;
 
   do {
 
-    end_offset = tvb_find_char(tvb, item_offset, length - (item_offset - offset), ',');
+    end_offset =
+        tvb_find_char(tvb, item_offset, length - (item_offset - offset), ',');
 
     count++; /* increase the number of items */
 
-    if(end_offset == -1) {
+    if (end_offset == -1) {
       /* length is to the end of the buffer */
       item_length = length - (item_offset - offset);
     } else {
@@ -194,16 +194,16 @@ static void dissect_imf_mailbox_list(const guint8 *tvb, int offset, gint length)
     }
     dissect_imf_mailbox(tvb, item_offset, item_length);
 
-    if(end_offset != -1) {
+    if (end_offset != -1) {
       item_offset = end_offset + 1;
     }
-  } while(end_offset != -1);
-
+  } while (end_offset != -1);
 };
 static void dissect_imf_siolabel(){};
 
 static struct imf_field imf_fields[] = {
 
+    {"unkown-extension", IMF_FIELD_UNKNOWN, NO_SUBDISSECTION},
     {"content-type", IMF_FIELD_CONTENT_TYPE, NO_SUBDISSECTION},
     {"from", IMF_FIELD_FROM, dissect_imf_mailbox_list},
     {"to", IMF_FIELD_TO, dissect_imf_address_list},
@@ -910,6 +910,51 @@ static gint is_known_multipart_header(const char *header_str, guint len) {
   return -1;
 }
 
+static int dissect_text_lines(const guint8 *tvb, gint tvb_size,
+                              guint8 *content_type_str, void *data) {
+  gint offset = 0, next_offset;
+  gint len;
+  http_message_info_t *message_info;
+  const char *data_name;
+  int length = tvb_size;
+
+  /* Check if this is actually xml
+   * If there is less than 38 characters this is not XML
+   * <?xml version="1.0" encoding="UTF-8"?>
+   */
+  if (length > 38) {
+    // if (tvb_strncaseeql(tvb, 0, "<?xml", 5) == 0){
+    // 	call_dissector(xml_handle, tvb, pinfo, tree);
+    // 	return length;
+    // }
+  }
+
+  data_name = (char *)content_type_str;
+  if (!(data_name && data_name[0])) {
+    /*
+     * No information from "match_string"
+     */
+    message_info = (http_message_info_t *)data;
+    if (message_info == NULL) {
+      /*
+       * No information from dissector data
+       */
+      data_name = NULL;
+    } else {
+      data_name = message_info->media_str;
+      if (!(data_name && data_name[0])) {
+        /*
+         * No information from dissector data
+         */
+        data_name = NULL;
+      }
+    }
+  }
+
+  return length;
+}
+static int dissect_multipart(const guint8 *tvb, gint tvb_size,
+                             guint8 *content_type_str, void *data);
 /*
  * Process a multipart body-part:
  *      MIME-part-headers [ line-end *OCTET ]
@@ -1129,7 +1174,7 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
     gint body_len = boundary_start - body_start;
     // tvbuff_t *tmp_tvb = tvb_new_subset_length(tvb, body_start, body_len);
 
-    guint8 *tmp_tvb = (guint8 *)g_memdup2(tvb + body_start, body_len);
+    const guint8 *tmp_tvb = (guint8 *)g_memdup2(tvb + body_start, body_len);
     /*
      * If multipart subtype is encrypted the protcol string was set.
      *
@@ -1189,6 +1234,26 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
       /*
        * First try the dedicated multipart dissector table
        */
+
+      printf("content_type_str: %s\n", content_type_str);
+
+      if (strcmp(content_type_str, "text/plain") == 0) {
+        dissected = dissect_text_lines(
+            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        // return 0;
+      }
+
+      if (strcmp(content_type_str, "text/html") == 0) {
+        dissected = dissect_text_lines(
+            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        // return 0;
+      }
+
+      if (strcmp(content_type_str, "multipart/alternative") == 0) {
+        dissected = dissect_multipart(
+            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        // return 0;
+      }
       // dissected =
       // dissector_try_string(multipart_media_subdissector_table,
       //             content_type_str, tmp_tvb, pinfo, subtree,
@@ -1225,8 +1290,6 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
 
     return boundary_start + boundary_line_len;
   }
-
-  return 0;
 }
 
 /*
@@ -1239,13 +1302,13 @@ static int dissect_multipart(const guint8 *tvb, gint tvb_size,
   multipart_info_t *m_info = get_multipart_info(content_type_str, message_info);
   gboolean last_boundary = FALSE;
 
+  printf("==================================== MIME "
+         "====================================\n");
   // print m_info info
   printf("m_info->type: %s\n", m_info->type);
   printf("m_info->boundary: %s\n", m_info->boundary);
   printf("m_info->boundary_length: %d\n", m_info->boundary_length);
 
-  printf("==================================== MIME "
-         "====================================\n");
   /*
    * Process the multipart preamble
    */
@@ -1257,13 +1320,15 @@ static int dissect_multipart(const guint8 *tvb, gint tvb_size,
    * Process the encapsulated bodies
    */
   while (last_boundary == FALSE) {
+    printf("------------------------------------ boundary "
+           "------------------------------------\n");
     header_start =
         process_body_part(tvb, tvb_size, message_info, m_info, header_start,
                           body_index++, &last_boundary);
-    printf("------------------------------------ boundary "
-           "------------------------------------\n");
   }
 
+    printf("------------------------------------ last boundary "
+           "------------------------------------\n");
   return 1;
 }
 void dissect_imf(const guint8 *tvb, size_t tvb_len) {

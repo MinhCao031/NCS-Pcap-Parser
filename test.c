@@ -38,8 +38,11 @@ void flow_browser(flow_base_t *flow) {
     printf("Fragments:\n");
 
     // print all fragments in smtp_info->fragments, note that this is GSList
+    int i = 0;
     for (GSList *temp = smtp_info->fragments; temp != NULL; temp = temp->next) {
-      printf("%s\n", (char *)temp->data);
+      i++;
+      // printf("%s\n", (char *)temp->data);
+      printf("Fragment %d length: %ld\n", i, strlen((char *)temp->data));
     }
 
     // merge all fragments in smtp_info->fragments to one string
@@ -57,7 +60,7 @@ void flow_browser(flow_base_t *flow) {
     // printf("%s\n", defragment);
   }
 
-  // dissect_imf(defragment, smtp_info->defragment_size);
+  dissect_imf(defragment, smtp_info->defragment_size);
 }
 
 void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
@@ -99,8 +102,11 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
 
   while (pcap_next_ex(handler, &header_pcap, &full_packet) >= 0) {
 
+    // Show the packet number & timestamp
     captured_packets++;
     // printf("#%d\n", ++captured_packets);
+    // if (captured_packets > 35) break;
+
     int8_t progress_pkt = 1;
     // Dissection Step 1 of
     // 4----------------------------------------------------------------------
@@ -142,6 +148,10 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
     parsed_packet pkt = pkt_parser(packet, segment, payload);
 
     insert_packet(table, pkt, fout_parser);
+    // printf(
+    //   "Tracking #%-3u SEQ = %10u => %10u, ACK = %10u\n", captured_packets,
+    //   pkt.tcp.seq, pkt.tcp.seq + pkt.payload.data_len, pkt.tcp.ack_seq
+    // );
 
     progress_pkt += 1;
     LOG_DBG(fout_parser, DBG_PARSER,
@@ -160,10 +170,25 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
   }
   }
 
+  // Print HashTable
   print_hashtable(table, fout_list_flow);
 
-  // flow_base_t *flow_test = search_flow(table, 5676399932842470375, stdout);
-  // flow_browser(flow_test);
+  // Test a random flow
+  printf("\nTest 01: Get a random flow\n");
+
+  flow_base_t *flow_test = search_flow(table, 5676399932842470375, stdout);
+  // flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
+
+  if (flow_test) {
+    flow_browser(flow_test);
+  } else
+    printf("Flow not found.\n");
+
+  LOG_DBG(fout_list_flow, DBG_FLOW,
+          "Number of packets: %u\nNumber of flows: %u\n"
+          "Number of inserted packets: %u\nNumber of filtered packets: %u\n",
+          captured_packets, count_flows(table), inserted_packets,
+          filtered_packets);
 
   printf("\nFreeing...\n");
   free_hash_table(table);

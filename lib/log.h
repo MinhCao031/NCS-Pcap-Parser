@@ -20,7 +20,8 @@
 
 #pragma once
 
-#define PCAP_FILE "data/smtp.pcap"
+// #define PCAP_FILE "./data/sendFile.pcapng"
+ #define PCAP_FILE "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/smtp.pcap"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -33,12 +34,12 @@
 // 1 to print flow's info, otherwise 0
 #define DBG_FLOW (DBG_ALL & 1)
 // 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
+#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 1)
 // 1 to print to console, otherwise 0
 #define DBG_CONSOLE (DBG_ALL & 1)
 
 #define SEC2NANO 1000000000
-#define LIMIT_PACKET 27
+#define LIMIT_PACKET 2700000
 #define HASH_TABLE_SIZE 30030
 
 // If a sequence is too far from the previous one, that packet is consider ignored
@@ -97,6 +98,38 @@
     struct tm ts = *localtime(&((header_pcap->ts).tv_sec)); \
     strftime(full_timestamp, sizeof(full_timestamp), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
 
+#define PROCESS_PACKET_TIME(time_limit_warning)                        \
+    if (DBG_TIMER)                                                     \
+    {                                                                  \
+        process_time = (pkt_end.tv_sec - pkt_start.tv_sec) * SEC2NANO; \
+        process_time += pkt_end.tv_nsec - pkt_start.tv_nsec;           \
+        process_time_total += process_time;                            \
+        if (process_time < 1001)                                       \
+            sttstc[process_time / 100 - 3] += 1;                       \
+        else if (process_time < 10001)                                 \
+            sttstc[6 + (process_time + 999) / 1000] += 1;              \
+        else if (process_time < 100001)                                \
+            sttstc[15 + (process_time + 9999) / 10000] += 1;           \
+        else                                                           \
+            sttstc[26] += 1;                                           \
+        LOG_DBG(fout_parser, (process_time > time_limit_warning),      \
+                "Packet%8u:%7lu nanosec stoped at step %d of 6\n",     \
+                captured_packets, process_time, progress_pkt);         \
+    }
+
+#define STATISTIC_PACKET_TIME                                                                                \
+    if (DBG_TIMER)                                                                                           \
+    {                                                                                                        \
+        LOG_DBG(fout_parser, 1, "Packet time total: %lu\n", process_time_total);                             \
+        LOG_DBG(fout_parser, 1, "Average time process: %lf\n", 1.0 * process_time_total / captured_packets); \
+        for (uint8_t i = 0; i < 8; i++)                                                                      \
+            LOG_DBG(fout_parser, 1, " =%-6u nanosec: %5u time(s)\n", (i + 3) * 100, sttstc[i]);              \
+        for (uint8_t i = 8; i < 17; i++)                                                                     \
+            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 6) * 1000, sttstc[i]);             \
+        for (uint8_t i = 17; i < 26; i++)                                                                    \
+            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 15) * 10000, sttstc[i]);           \
+        LOG_DBG(fout_parser, 1, "> 100000 nanosec: %5u time(s)\n", sttstc[26]);                              \
+    }
 
 // Try to insert to flow
 #define TRY_INSERT_FLOW                                                                        \
