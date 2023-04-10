@@ -10,11 +10,17 @@
 
 static gboolean smtp_auth_parameter_decoding_enabled = FALSE;
 
+struct tvbuff {
+  const guint8 *real_data;
+  guint length;
+};
+
+typedef struct tvbuff tvbuff_t;
 // struct store smtp info
 typedef struct {
 
-  guint8 *username;
-  guint8 *password;
+  tvbuff_t username;
+  tvbuff_t password;
   guint8 *from;
   guint8 *to;
   guint8 *subject;
@@ -241,7 +247,7 @@ int length_eol(const guint8 *payload, int len, int offset,
   return -1;
 }
 
-int payload_find_line_end(const guint8 *tvb, const int offset, int len,
+int payload_find_line_end(tvbuff_t *tvb, const int offset, int len,
                           int *next_offset) {
   int eob_offset;
   int eol_offset;
@@ -253,7 +259,7 @@ int payload_find_line_end(const guint8 *tvb, const int offset, int len,
   /*
    * Look either for a CR or an LF.
    */
-  eol_offset = length_eol(tvb, len, offset, &found_needle);
+  eol_offset = length_eol(tvb->real_data, len, offset, &found_needle);
   /** printf("eol_offset: %d, len: %d\n", eol_offset, len); */
   if (eol_offset == -1) {
     /*
@@ -289,7 +295,7 @@ int payload_find_line_end(const guint8 *tvb, const int offset, int len,
          * Well, we can at least look at the next
          * byte.
          */
-        if (*(tvb + eol_offset + 1) == '\n') {
+        if (*(tvb->real_data + eol_offset + 1) == '\n') {
           /*
            * It's an LF; skip over the CR.
            */
@@ -309,15 +315,23 @@ int payload_find_line_end(const guint8 *tvb, const int offset, int len,
   return linelen;
 }
 
+gboolean tvb_offset_exists(tvbuff_t *tvb, const gint offset) {
+
+  if (offset < tvb->length) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
 /*
  * Call strncmp after checking if enough chars left, returning 0 if
  * it returns 0 (meaning "equal") and -1 otherwise, otherwise return -1.
  */
-gint tvb_strneql(const guint8 *tvb, const gint offset, const gchar *str,
+gint tvb_strneql(tvbuff_t *tvb, const gint offset, const gchar *str,
                  const size_t size) {
   const guint8 *ptr;
 
-  ptr = tvb + offset;
+  ptr = tvb->real_data + offset;
 
   if (ptr) {
     int cmp = strncmp((const char *)ptr, str, size);
@@ -334,9 +348,11 @@ gint tvb_strneql(const guint8 *tvb, const gint offset, const gchar *str,
     return -1;
   }
 }
-int smtp_decoder(const guint8 *tvb, gint tvb_size,
-                 struct smtp_session_state *session_state, gboolean request,
-                 int packet_number, Parsed_smtp *smtp_info) {
+gint tvb_length_remaining(const tvbuff_t *tvb, const gint offset) {
+  return tvb->length - offset;
+}
+int dissect_smtp(tvbuff_t *tvb, struct smtp_session_state *session_state,
+                 gboolean request, int packet_number, Parsed_smtp *smtp_info) {
 
   printf("[Packet %d] %s\n", packet_number,
          request == 1 ? "Request" : "Response");
@@ -355,7 +371,7 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
   gsize decrypt_len = 0;
   guint8 line_code[3];
 
-  if (tvb_size == 0) {
+  if (tvb->length == 0) {
     return 0;
   }
   if (request) {
@@ -371,9 +387,9 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
   }
 
   loffset = offset;
-  while (loffset < tvb_size) {
-    linelen =
-        payload_find_line_end(tvb, loffset, tvb_size - loffset, &next_offset);
+  while (tvb_offset_exists(tvb, loffset)) {
+    linelen = payload_find_line_end(tvb, loffset, tvb->length - loffset,
+                                    &next_offset);
     /** printf( */
     /**     "tvb_find_line_end: offset=%d,loffset=%d,next offset=%d,
      * linelen=%d\n", */
@@ -386,9 +402,9 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
          * tell the TCP dissector where the data for this message starts
          * in the data it handed us, and tell it we need more bytes
          */
-        return tvb_size;
+        return tvb->length;
       } else {
-        linelen = tvb_size - loffset;
+        linelen = tvb_length_remaining(tvb, loffset);
         next_offset = loffset + linelen;
       }
     }
@@ -410,7 +426,7 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
           tvb_strneql(tvb, loffset, "\r\n.\r\n", 5) == 0)
         eom_seen = TRUE;
 
-      length_remaining = tvb_size - loffset;
+      length_remaining = tvb_length_remaining(tvb, loffset);
       if (tvb_strneql(tvb, loffset + length_remaining - 2, "\r\n", 2) == 0)
         session_state->crlf_seen = TRUE;
       else
@@ -442,12 +458,12 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
              * We are handling a BDAT message.
              * Check if we have reached end of the data chunk.
              */
-            session_state->msg_read_len += tvb_size - loffset;
+            session_state->msg_read_len += tvb_length_remaining(tvb, loffset);
             /*
              * Since we're grabbing the rest of the packet, update the
              * offset accordingly
              */
-            next_offset = tvb_size;
+            next_offset = tvb->length;
 
             if (session_state->msg_read_len == session_state->msg_tot_len) {
               /*
@@ -478,7 +494,7 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
          * the putative command ends.
          */
         if ((session_state->auth_state != SMTP_AUTH_STATE_NONE)) {
-          decrypt = (u_char *)g_memdup2(tvb+loffset, linelen);
+          decrypt = (u_char *)g_memdup2(tvb + loffset, linelen);
           if ((smtp_auth_parameter_decoding_enabled) &&
               (strlen((const char *)decrypt) > 1) &&
               (g_base64_decode_inplace((gchar *)decrypt, &decrypt_len)) &&
@@ -487,11 +503,11 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
             line = decrypt;
             linelen = (int)decrypt_len;
           } else {
-            line = tvb;
+            line = tvb->real_data;
             decrypt_len = linelen;
           }
         } else {
-          line = tvb;
+          line = tvb->real_data;
         }
 
         /** line = tvb; */
@@ -609,6 +625,8 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
     loffset = next_offset;
   }
 
+  // g_free(decrypt);
+
   if (request) {
 
     /** Check out whether or not we can see a command in there ... */
@@ -624,26 +642,25 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
 
     switch (spd_frame_data->pdu_type) {
     case SMTP_PDU_MESSAGE:
-      length_remaining = tvb_size - offset;
+      length_remaining = tvb_length_remaining(tvb, offset);
       if (TRUE) {
         // add tvb to fragments list in smtp_info
-        smtp_info->fragments =
-            g_slist_append(smtp_info->fragments, (guchar *)tvb);
+        smtp_info->fragments = g_slist_append(smtp_info->fragments, (guint8 *)tvb->real_data);
         smtp_info->num_fragments++;
-        smtp_info->defragment_size += tvb_size;
-        printf("\tSize of defragmented message: %d\n",tvb_size);
+        smtp_info->defragment_size += tvb->length;
+        printf("\tSize of defragmented message: %d\n", tvb->length);
       }
       break;
     case SMTP_PDU_EOM:
       printf("\tEOM seen\n");
       if (loffset) {
         // add tvb to fragments list in smtp_info
-        smtp_info->fragments =
-            g_slist_append(smtp_info->fragments, (guchar *)tvb);
+        smtp_info->fragments = g_slist_append(smtp_info->fragments, (guint8 *)tvb->real_data);
         smtp_info->num_fragments++;
-        // ignore the EOM in the defragmented message, so the size is loffset, not tvb_size
+        // ignore the EOM in the defragmented message, so the size is loffset,
+        // not tvb_size
         smtp_info->defragment_size += loffset;
-        printf("\tSize of defragmented message: %d\n",tvb_size);
+        printf("\tSize of defragmented message: %d\n", tvb->length);
       }
       break;
     case SMTP_PDU_CMD:
@@ -656,25 +673,23 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
       /** should probably handle it. */
 
       loffset = offset;
-      while (loffset < tvb_size) {
+      while (tvb_offset_exists(tvb, loffset)) {
 
         /** Find the end of the line. */
 
-        linelen = payload_find_line_end(tvb, loffset, tvb_size - loffset,
+        linelen = payload_find_line_end(tvb, loffset, tvb->length - loffset,
                                         &next_offset);
 
         if (session_state->auth_state == SMTP_AUTH_STATE_USERNAME_RSP) {
 
           // copy decrypt to session_state->username
-          smtp_info->username = (guint8 *)g_malloc(linelen + 1);
-          smtp_info->username[linelen]= '\0';
-          memcpy(smtp_info->username, tvb, linelen);
+          smtp_info->username =
+              (tvbuff_t){.real_data = tvb->real_data, .length = (guint)linelen};
         } else if (session_state->auth_state == SMTP_AUTH_STATE_PASSWORD_RSP) {
 
           // copy decrypt to session_state->password
-          smtp_info->password = (guint8 *)g_malloc(linelen + 1);
-          smtp_info->password[linelen]= '\0';
-          memcpy(smtp_info->password, tvb, linelen);
+          smtp_info->password =
+              (tvbuff_t){.real_data = tvb->real_data, .length = (guint)linelen};
         }
 
         loffset = next_offset;
@@ -685,23 +700,23 @@ int smtp_decoder(const guint8 *tvb, gint tvb_size,
     smtp_multiline_state_t multiline_state = SMTP_MULTILINE_NONE;
     guint32 multiline_code = 0;
 
-    while (offset < tvb_size) {
+    while (tvb_offset_exists(tvb, offset)) {
       // Find the end of the line.
-      linelen =
-          payload_find_line_end(tvb, offset, tvb_size - offset, &next_offset);
+      linelen = payload_find_line_end(tvb, offset, tvb->length - offset,
+                                      &next_offset);
       /** printf("linelen: %d\n", linelen); */
 
       if (linelen >= 3) {
-        line_code[0] = *(tvb + offset);
-        line_code[1] = *(tvb + offset + 1);
-        line_code[2] = *(tvb + offset + 2);
+        line_code[0] = *(tvb->real_data + offset);
+        line_code[1] = *(tvb->real_data + offset + 1);
+        line_code[2] = *(tvb->real_data + offset + 2);
 
         if (g_ascii_isdigit(line_code[0]) && g_ascii_isdigit(line_code[1]) &&
             g_ascii_isdigit(line_code[2])) {
 
           code = (line_code[0] - '0') * 100 + (line_code[1] - '0') * 10 +
                  (line_code[2] - '0');
-          if ((linelen > 3) && (*(tvb + offset + 3) == '-')) {
+          if ((linelen > 3) && (*(tvb->real_data + offset + 3) == '-')) {
             if (multiline_state == SMTP_MULTILINE_NONE) {
               multiline_state = SMTP_MULTILINE_START;
               multiline_code = code;

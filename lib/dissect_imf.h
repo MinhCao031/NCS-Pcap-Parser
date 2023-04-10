@@ -44,11 +44,11 @@ enum field {
 struct imf_field {
   const char *name; /* field name - in lower case for matching purposes */
   enum field hf_id; /* wireshark field */
-  void (*subdissector)(const guint8 *tvb, int offset, int length);
+  void (*subdissector)(tvbuff_t *tvb, int offset, int length);
 };
 
 // find index if charactor in string
-static int tvb_find_char(const guint8 *tvb, const gint start_offset,
+static int tvb_find_char(tvbuff_t *tvb, const gint start_offset,
                          const gint max_length, const guint8 needle) {
 
   const guint8 *result;
@@ -64,16 +64,17 @@ static int tvb_find_char(const guint8 *tvb, const gint start_offset,
 
   /* If we have real data, perform our search now. */
   if (tvb) {
-    result = (const guint8 *)memchr(tvb + start_offset, needle, limit);
+    result =
+        (const guint8 *)memchr(tvb->real_data + start_offset, needle, limit);
     if (result == NULL) {
       return -1;
     } else {
-      return (gint)(result - tvb);
+      return (gint)(result - tvb->real_data);
     }
   }
   return -1;
 }
-static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
+static void dissect_imf_mailbox(tvbuff_t *tvb, gint offset, gint length) {
 
   int addr_pos, end_pos;
 
@@ -87,14 +88,14 @@ static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
     /* we can't find an angle bracket - the whole field is therefore the address
      */
 
-    printf("\taddress: %.*s\n", length, tvb + offset);
+    printf("\taddress: %.*s\n", length, tvb->real_data + offset);
 
   } else {
     /* we can find an angle bracket - let's see if we can find a display name */
     /* XXX: the '<' could be in the display name */
 
     for (; offset < addr_pos; offset++) {
-      if (!g_ascii_isspace(*(tvb + offset))) {
+      if (!g_ascii_isspace(*(tvb->real_data + offset))) {
         break;
       }
     }
@@ -103,10 +104,11 @@ static void dissect_imf_mailbox(const guint8 *tvb, gint offset, gint length) {
         tvb_find_char(tvb, addr_pos + 1, length - (addr_pos + 1 - offset), '>');
 
     // print address string with length
-    printf("\taddress: %.*s\n", end_pos - addr_pos - 1, tvb + addr_pos + 1);
+    printf("\taddress: %.*s\n", end_pos - addr_pos - 1,
+           tvb->real_data + addr_pos + 1);
   }
 };
-static void dissect_imf_address(const guint8 *tvb, int offset, gint length) {
+static void dissect_imf_address(tvbuff_t *tvb, int offset, gint length) {
 
   int addr_pos;
 
@@ -120,12 +122,12 @@ static void dissect_imf_address(const guint8 *tvb, int offset, gint length) {
 
     /* consume any whitespace */
     for (addr_pos++; addr_pos < (offset + length); addr_pos++) {
-      if (!g_ascii_isspace(*(tvb + addr_pos))) {
+      if (!g_ascii_isspace(*(tvb->real_data + addr_pos))) {
         break;
       }
     }
 
-    if (*(tvb + addr_pos) != ';') {
+    if (*(tvb->real_data + addr_pos) != ';') {
 
       // dissect_imf_mailbox_list(tvb, addr_pos, length - (addr_pos - offset));
 
@@ -133,8 +135,7 @@ static void dissect_imf_address(const guint8 *tvb, int offset, gint length) {
     }
   }
 };
-static void dissect_imf_address_list(const guint8 *tvb, int offset,
-                                     gint length) {
+static void dissect_imf_address_list(tvbuff_t *tvb, int offset, gint length) {
 
   int count = 0;
   int item_offset;
@@ -169,8 +170,7 @@ static void dissect_imf_address_list(const guint8 *tvb, int offset,
   // proto_item_append_text(item, ", %d item%s", count, plurality(count, "",
   // "s"));
 }
-static void dissect_imf_mailbox_list(const guint8 *tvb, int offset,
-                                     gint length) {
+static void dissect_imf_mailbox_list(tvbuff_t *tvb, int offset, gint length) {
 
   int count = 0;
   int item_offset;
@@ -231,7 +231,7 @@ static struct imf_field imf_fields[] = {
     {"content-language", IMF_FIELD_CONTENT_LANGUAGE, NO_SUBDISSECTION},
     {NULL, NOPE, NULL}};
 
-int imf_find_field_end(const guint8 *tvb, int offset, gint max_length,
+int imf_find_field_end(tvbuff_t *tvb, int offset, gint max_length,
                        gboolean *last_field) {
 
   while (offset < max_length) {
@@ -241,7 +241,7 @@ int imf_find_field_end(const guint8 *tvb, int offset, gint max_length,
 
     if (offset != -1) {
       /* protect against buffer overrun and only then look for next char */
-      if (++offset < max_length && *(tvb + offset) == '\n') {
+      if (++offset < max_length && *(tvb->real_data + offset) == '\n') {
         /* OK - so we have found CRLF */
         if (++offset >= max_length) {
           /* end of buffer and also end of fields */
@@ -253,10 +253,11 @@ int imf_find_field_end(const guint8 *tvb, int offset, gint max_length,
           return offset - 2;
         }
         /* peek the next character */
-        switch (*(tvb + offset)) {
+        switch (*(tvb->real_data + offset)) {
         case '\r':
           /* probably end of the fields */
-          if ((offset + 1) < max_length && *(tvb + offset + 1) == '\n') {
+          if ((offset + 1) < max_length &&
+              *(tvb->real_data + offset + 1) == '\n') {
             if (last_field) {
               *last_field = TRUE;
             }
@@ -280,7 +281,7 @@ int imf_find_field_end(const guint8 *tvb, int offset, gint max_length,
   return -1; /* Fail: No CR found (other than possible continuation) */
 }
 
-static void dissect_imf_content_type(const guint8 *tvb, int offset, int length,
+static void dissect_imf_content_type(tvbuff_t *tvb, int offset, int length,
                                      guint8 **type, guint8 **parameters) {
   int first_colon;
   int end_offset;
@@ -289,7 +290,7 @@ static void dissect_imf_content_type(const guint8 *tvb, int offset, int length,
 
   /* first strip any whitespace */
   for (i = 0; i < length; i++) {
-    if (!g_ascii_isspace(*(tvb + offset + i))) {
+    if (!g_ascii_isspace(*(tvb->real_data + offset + i))) {
       offset += i;
       break;
     }
@@ -308,7 +309,7 @@ static void dissect_imf_content_type(const guint8 *tvb, int offset, int length,
     // copy string from tvb with length len to type
     // memcpy((void *)*type, tvb + offset, len);
     // using g_memdup instead of memcpy
-    *type = (guint8 *)g_memdup2(tvb + offset, len);
+    *type = (guint8 *)g_memdup2(tvb->real_data + offset, len);
 
     // add null terminator
     *(*type + len) = '\0';
@@ -326,7 +327,7 @@ static void dissect_imf_content_type(const guint8 *tvb, int offset, int length,
     // copy string from tvb with length len to parameters
     // memcpy((void *)*parameters, tvb + first_colon + 1, len);
     // using g_memdup instead of memcpy
-    *parameters = (guint8 *)g_memdup2(tvb + first_colon + 1, len);
+    *parameters = (guint8 *)g_memdup2(tvb->real_data + first_colon + 1, len);
     // add null terminator
     *(*parameters + len) = '\0';
   }
@@ -618,19 +619,19 @@ static multipart_info_t *get_multipart_info(guint8 *content_type_str,
  * Set boundary_line_len to the length of the entire boundary delimiter.
  * Set last_boundary to TRUE if we've seen the last-boundary delimiter.
  */
-static gint find_first_boundary(const guint8 *tvb, gint tvb_size, gint start,
+static gint find_first_boundary(tvbuff_t *tvb, gint start,
                                 const guint8 *boundary, gint boundary_len,
                                 gint *boundary_line_len,
                                 gboolean *last_boundary) {
   gint offset = start, next_offset, line_len, boundary_start;
 
-  while (tvb_size > offset + 2 + boundary_len) {
+  while (tvb_offset_exists(tvb, offset + 2 + boundary_len)) {
     boundary_start = offset;
     if (((tvb_strneql(tvb, offset, (const gchar *)"--", 2) == 0) &&
          (tvb_strneql(tvb, offset + 2, (const gchar *)boundary, boundary_len) ==
           0))) {
       /* Boundary string; now check if last */
-      if (((tvb_size - (offset + 2 + boundary_len + 2)) >= 0) &&
+      if (tvb_length_remaining(tvb, (offset + 2 + boundary_len + 2) >= 0) &&
           (tvb_strneql(tvb, offset + 2 + boundary_len, (const gchar *)"--",
                        2) == 0)) {
         *last_boundary = TRUE;
@@ -638,7 +639,8 @@ static gint find_first_boundary(const guint8 *tvb, gint tvb_size, gint start,
         *last_boundary = FALSE;
       }
       /* Look for line end of the boundary line */
-      line_len = payload_find_line_end(tvb, offset, tvb_size - offset, &offset);
+      line_len =
+          payload_find_line_end(tvb, offset, tvb->length - offset, &offset);
       if (line_len == -1) {
         *boundary_line_len = -1;
       } else {
@@ -647,7 +649,7 @@ static gint find_first_boundary(const guint8 *tvb, gint tvb_size, gint start,
       return boundary_start;
     }
     line_len =
-        payload_find_line_end(tvb, offset, tvb_size - offset, &next_offset);
+        payload_find_line_end(tvb, offset, tvb->length - offset, &next_offset);
     if (line_len == -1) {
       return -1;
     }
@@ -665,15 +667,15 @@ static gint find_first_boundary(const guint8 *tvb, gint tvb_size, gint start,
  * Set boundary_line_len to the length of the entire boundary delimiter.
  * Set last_boundary to TRUE if we've seen the last-boundary delimiter.
  */
-static gint find_next_boundary(const guint8 *tvb, gint tvb_size, gint start,
+static gint find_next_boundary(tvbuff_t *tvb, gint start,
                                const guint8 *boundary, gint boundary_len,
                                gint *boundary_line_len,
                                gboolean *last_boundary) {
   gint offset = start, next_offset, line_len, boundary_start;
 
-  while (tvb_size > (offset + 2 + boundary_len)) {
+  while (tvb_offset_exists(tvb, (offset + 2 + boundary_len))) {
     line_len =
-        payload_find_line_end(tvb, offset, tvb_size - offset, &next_offset);
+        payload_find_line_end(tvb, offset, tvb->length - offset, &next_offset);
     if (line_len == -1) {
       return -1;
     }
@@ -682,7 +684,8 @@ static gint find_next_boundary(const guint8 *tvb, gint tvb_size, gint start,
          (tvb_strneql(tvb, next_offset + 2, (const gchar *)boundary,
                       boundary_len) == 0))) {
       /* Boundary string; now check if last */
-      if (((tvb_size - (next_offset + 2 + boundary_len + 2)) >= 0) &&
+      if (tvb_length_remaining(tvb,
+                               (next_offset + 2 + boundary_len + 2) >= 0) &&
           (tvb_strneql(tvb, next_offset + 2 + boundary_len, (const gchar *)"--",
                        2) == 0)) {
         *last_boundary = TRUE;
@@ -690,8 +693,8 @@ static gint find_next_boundary(const guint8 *tvb, gint tvb_size, gint start,
         *last_boundary = FALSE;
       }
       /* Look for line end of the boundary line */
-      line_len = payload_find_line_end(tvb, next_offset, tvb_size - next_offset,
-                                       &offset);
+      line_len = payload_find_line_end(tvb, next_offset,
+                                       tvb->length - next_offset, &offset);
       if (line_len == -1) {
         *boundary_line_len = -1;
       } else {
@@ -723,15 +726,14 @@ static gint find_next_boundary(const guint8 *tvb, gint tvb_size, gint start,
  *
  * Return the offset to the start of the first body-part.
  */
-static gint process_preamble(const guint8 *tvb, gint tvb_size,
-                             multipart_info_t *m_info,
+static gint process_preamble(tvbuff_t *tvb, multipart_info_t *m_info,
                              gboolean *last_boundary) {
   gint boundary_start, boundary_line_len;
 
   const guint8 *boundary = (guint8 *)m_info->boundary;
   gint boundary_len = m_info->boundary_length;
 
-  boundary_start = find_first_boundary(tvb, tvb_size, 0, boundary, boundary_len,
+  boundary_start = find_first_boundary(tvb, 0, boundary, boundary_len,
                                        &boundary_line_len, last_boundary);
   if (boundary_start == 0) {
     return boundary_start + boundary_line_len;
@@ -910,13 +912,13 @@ static gint is_known_multipart_header(const char *header_str, guint len) {
   return -1;
 }
 
-static int dissect_text_lines(const guint8 *tvb, gint tvb_size,
-                              guint8 *content_type_str, void *data) {
+static int dissect_text_lines(tvbuff_t *tvb, guint8 *content_type_str,
+                              void *data) {
   gint offset = 0, next_offset;
   gint len;
   http_message_info_t *message_info;
   const char *data_name;
-  int length = tvb_size;
+  int length = tvb->length;
 
   /* Check if this is actually xml
    * If there is less than 38 characters this is not XML
@@ -953,8 +955,8 @@ static int dissect_text_lines(const guint8 *tvb, gint tvb_size,
 
   return length;
 }
-static int dissect_multipart(const guint8 *tvb, gint tvb_size,
-                             guint8 *content_type_str, void *data);
+static int dissect_multipart(tvbuff_t *tvb, guint8 *content_type_str,
+                             void *data);
 /*
  * Process a multipart body-part:
  *      MIME-part-headers [ line-end *OCTET ]
@@ -965,7 +967,7 @@ static int dissect_multipart(const guint8 *tvb, gint tvb_size,
  * Return the offset to the start of the next body-part.
  */
 
-static gint process_body_part(const guint8 *tvb, gint tvb_size,
+static gint process_body_part(tvbuff_t *tvb,
                               http_message_info_t *input_message_info,
                               multipart_info_t *m_info, gint start, gint idx,
                               gboolean *last_boundary)
@@ -987,9 +989,8 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
   gint boundary_len = m_info->boundary_length;
 
   /* find the next boundary to find the end of this body part */
-  boundary_start =
-      find_next_boundary(tvb, tvb_size, offset, boundary, boundary_len,
-                         &boundary_line_len, last_boundary);
+  boundary_start = find_next_boundary(tvb, offset, boundary, boundary_len,
+                                      &boundary_line_len, last_boundary);
 
   if (boundary_start <= 0) {
     return -1;
@@ -1016,8 +1017,8 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
      * 3:d argument to imf_find_field_end() maxlen; must be last offset in the
      * tvb.
      */
-    next_offset = imf_find_field_end(tvb, offset, (tvb_size - offset) + offset,
-                                     &last_field);
+    next_offset = imf_find_field_end(
+        tvb, offset, (tvb->length - offset) + offset, &last_field);
 
     /* the following should never happen */
     /* If cr not found, won't have advanced - get out to avoid infinite loop! */
@@ -1041,7 +1042,7 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
 
     // hdr_str = tvb_get_string_enc(pinfo->pool, tvb, offset, next_offset -
     // offset, ENC_ASCII);
-    hdr_str = (char *)g_memdup2(tvb + offset, next_offset - offset);
+    hdr_str = (char *)g_memdup2(tvb->real_data + offset, next_offset - offset);
 
     colon_offset = 0;
     header_str = unfold_and_compact_mime_header(hdr_str, &colon_offset);
@@ -1159,6 +1160,9 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
         default:
           break;
         }
+        // g_free(value_str);
+        // g_free(header_str);
+        // g_free(hdr_str);
       }
     }
     offset = next_offset;
@@ -1174,7 +1178,10 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
     gint body_len = boundary_start - body_start;
     // tvbuff_t *tmp_tvb = tvb_new_subset_length(tvb, body_start, body_len);
 
-    const guint8 *tmp_tvb = (guint8 *)g_memdup2(tvb + body_start, body_len);
+    tvbuff_t *tmp_tvb = (tvbuff_t *)g_malloc(sizeof(tvbuff_t));
+    tmp_tvb->real_data =
+        (guint8 *)g_memdup2(tvb->real_data + body_start, body_len),
+    tmp_tvb->length = (guint)body_len;
     /*
      * If multipart subtype is encrypted the protcol string was set.
      *
@@ -1235,23 +1242,21 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
        * First try the dedicated multipart dissector table
        */
 
-      printf("content_type_str: %s\n", content_type_str);
-
       if (strcmp(content_type_str, "text/plain") == 0) {
-        dissected = dissect_text_lines(
-            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        dissected = dissect_text_lines(tmp_tvb, (guint8 *)content_type_str,
+                                       &message_info);
         // return 0;
       }
 
       if (strcmp(content_type_str, "text/html") == 0) {
-        dissected = dissect_text_lines(
-            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        dissected = dissect_text_lines(tmp_tvb, (guint8 *)content_type_str,
+                                       &message_info);
         // return 0;
       }
 
       if (strcmp(content_type_str, "multipart/alternative") == 0) {
-        dissected = dissect_multipart(
-            tmp_tvb, body_len, (guint8 *)content_type_str, &message_info);
+        dissected = dissect_multipart(tmp_tvb, (guint8 *)content_type_str,
+                                      &message_info);
         // return 0;
       }
       // dissected =
@@ -1288,6 +1293,11 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
     //        boundary_start, boundary_line_len, ENC_NA|ENC_ASCII);
     //     }
 
+    // free the memory allocated for the tmp_tvb
+
+    // g_free((void *)tmp_tvb->real_data);
+    // g_free(tmp_tvb);
+
     return boundary_start + boundary_line_len;
   }
 }
@@ -1296,8 +1306,8 @@ static gint process_body_part(const guint8 *tvb, gint tvb_size,
  * Call this method to actually dissect the multipart body.
  * NOTE - Only do so if a boundary string has been found!
  */
-static int dissect_multipart(const guint8 *tvb, gint tvb_size,
-                             guint8 *content_type_str, void *data) {
+static int dissect_multipart(tvbuff_t *tvb, guint8 *content_type_str,
+                             void *data) {
   http_message_info_t *message_info = (http_message_info_t *)data;
   multipart_info_t *m_info = get_multipart_info(content_type_str, message_info);
   gboolean last_boundary = FALSE;
@@ -1307,12 +1317,11 @@ static int dissect_multipart(const guint8 *tvb, gint tvb_size,
   // print m_info info
   printf("m_info->type: %s\n", m_info->type);
   printf("m_info->boundary: %s\n", m_info->boundary);
-  printf("m_info->boundary_length: %d\n", m_info->boundary_length);
 
   /*
    * Process the multipart preamble
    */
-  gint header_start = process_preamble(tvb, tvb_size, m_info, &last_boundary);
+  gint header_start = process_preamble(tvb, m_info, &last_boundary);
 
   gint body_index = 0;
 
@@ -1322,16 +1331,15 @@ static int dissect_multipart(const guint8 *tvb, gint tvb_size,
   while (last_boundary == FALSE) {
     printf("------------------------------------ boundary "
            "------------------------------------\n");
-    header_start =
-        process_body_part(tvb, tvb_size, message_info, m_info, header_start,
-                          body_index++, &last_boundary);
+    header_start = process_body_part(tvb, message_info, m_info, header_start,
+                                     body_index++, &last_boundary);
   }
 
-    printf("------------------------------------ last boundary "
-           "------------------------------------\n");
-  return 1;
+  printf("------------------------------------ last boundary "
+         "------------------------------------\n");
+  return tvb->length;
 }
-void dissect_imf(const guint8 *tvb, size_t tvb_len) {
+void dissect_imf(tvbuff_t *tvb) {
   guint8 *content_type_str = NULL;
   guint8 *parameters = NULL;
   int hf_id;
@@ -1341,10 +1349,10 @@ void dissect_imf(const guint8 *tvb, size_t tvb_len) {
   gint max_length;
   gchar *key;
   gboolean last_field = FALSE;
-  guint8 *next_tvb;
+  tvbuff_t *next_tvb;
   struct imf_field *f_info;
 
-  max_length = tvb_len;
+  max_length = tvb->length;
 
   while (!last_field) {
 
@@ -1355,7 +1363,7 @@ void dissect_imf(const guint8 *tvb, size_t tvb_len) {
       // no colon found, so this is not a valid header
       break;
     } else {
-      key = g_strndup((const char *)tvb + start_offset,
+      key = g_strndup((const char *)tvb->real_data + start_offset,
                       end_offset - start_offset);
 
       // convert to lower case
@@ -1379,7 +1387,7 @@ void dissect_imf(const guint8 *tvb, size_t tvb_len) {
       /* remove any leading whitespace */
       for (value_offset = start_offset; value_offset < end_offset;
            value_offset++)
-        if (!g_ascii_isspace(*(tvb + value_offset))) {
+        if (!g_ascii_isspace(*(tvb->real_data + value_offset))) {
           break;
         }
 
@@ -1390,7 +1398,7 @@ void dissect_imf(const guint8 *tvb, size_t tvb_len) {
 
       // print key-value pair in pretty table format
       printf("%-30s %.*s", key, end_offset - start_offset,
-             (const char *)tvb + start_offset);
+             (const char *)tvb->real_data + start_offset);
 
       if (hf_id == IMF_FIELD_CONTENT_TYPE) {
         dissect_imf_content_type(tvb, start_offset, end_offset - start_offset,
@@ -1419,17 +1427,21 @@ void dissect_imf(const guint8 *tvb, size_t tvb_len) {
     http_message_info_t message_info;
 
     if (FALSE) {
-      next_tvb = (u_char *)tvb + end_offset;
+      next_tvb->real_data = tvb->real_data + end_offset;
+      next_tvb->length = tvb->length - end_offset;
     } else {
-      next_tvb = (u_char *)tvb + end_offset;
+      next_tvb = (tvbuff_t *)malloc(sizeof(tvbuff_t));
+      next_tvb->real_data = tvb->real_data + end_offset;
+      next_tvb->length = tvb->length - end_offset;
     }
 
     message_info.type = HTTP_OTHERS;
     message_info.media_str = (const char *)parameters;
     message_info.data = NULL;
-    dissect_multipart(next_tvb, strlen((char *)next_tvb), content_type_str,
-                      (void *)&message_info);
+    dissect_multipart(next_tvb, content_type_str, (void *)&message_info);
   }
+  // g_free(content_type_str);
+  // g_free(parameters);
 }
 
 #endif
