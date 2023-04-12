@@ -3,7 +3,6 @@
 
 #include "dissect_smtp.h"
 #include <glib-2.0/glib.h>
-// #include <glib-2.0/glibconfig.h>
 
 #include "ws/wsutil/str_util.h"
 #define PNAME "Internet Message Format"
@@ -74,6 +73,13 @@ static int tvb_find_char(tvbuff_t *tvb, const gint start_offset,
   }
   return -1;
 }
+
+static void dissect_imf_mailbox(tvbuff_t *tvb, int offset, int length);
+static void dissect_imf_address(tvbuff_t *tvb, int offset, int length);
+static void dissect_imf_address_list(tvbuff_t *tvb, int offset, int length);
+static void dissect_imf_mailbox_list(tvbuff_t *tvb, int offset, int length);
+static void dissect_imf_siolabel(tvbuff_t *tvb, int offset, int length);
+
 static void dissect_imf_mailbox(tvbuff_t *tvb, gint offset, gint length) {
 
   int addr_pos, end_pos;
@@ -129,7 +135,7 @@ static void dissect_imf_address(tvbuff_t *tvb, int offset, gint length) {
 
     if (*(tvb->real_data + addr_pos) != ';') {
 
-      // dissect_imf_mailbox_list(tvb, addr_pos, length - (addr_pos - offset));
+      dissect_imf_mailbox_list(tvb, addr_pos, length - (addr_pos - offset));
 
       /* XXX: need to check for final ';' */
     }
@@ -199,7 +205,6 @@ static void dissect_imf_mailbox_list(tvbuff_t *tvb, int offset, gint length) {
     }
   } while (end_offset != -1);
 };
-static void dissect_imf_siolabel(){};
 
 static struct imf_field imf_fields[] = {
 
@@ -217,10 +222,10 @@ static struct imf_field imf_fields[] = {
     {"resent-bcc", IMF_FIELD_RESENT_BCC, dissect_imf_address_list},
     {"resent-reply-to", IMF_FIELD_RESENT_REPLY_TO, dissect_imf_address_list},
     {"resent-sender", IMF_FIELD_RESENT_SENDER, dissect_imf_mailbox},
-    {"resent-message-id", IMF_FIELD_RESENT_MESSAGE_ID, dissect_imf_siolabel},
-    {"message-id", IMF_FIELD_MESSAGE_ID, dissect_imf_siolabel},
-    {"in-reply-to", IMF_FIELD_IN_REPLY_TO, dissect_imf_siolabel},
-    {"references", IMF_FIELD_REFERENCES, dissect_imf_siolabel},
+    {"resent-message-id", IMF_FIELD_RESENT_MESSAGE_ID, NO_SUBDISSECTION},
+    {"message-id", IMF_FIELD_MESSAGE_ID, NO_SUBDISSECTION},
+    {"in-reply-to", IMF_FIELD_IN_REPLY_TO, NO_SUBDISSECTION},
+    {"references", IMF_FIELD_REFERENCES, NO_SUBDISSECTION},
     {"subject", IMF_FIELD_SUBJECT, NO_SUBDISSECTION},
     {"comments", IMF_FIELD_COMMENTS, NO_SUBDISSECTION},
     {"keywords", IMF_FIELD_KEYWORDS, NO_SUBDISSECTION},
@@ -305,7 +310,7 @@ static void dissect_imf_content_type(tvbuff_t *tvb, int offset, int length,
     len = first_colon - offset;
 
     // allocate memory for type
-    *type = (guint8 *)malloc(len + 1);
+    *type = (guint8 *)g_malloc(len + 1);
     // copy string from tvb with length len to type
     // memcpy((void *)*type, tvb + offset, len);
     // using g_memdup instead of memcpy
@@ -323,7 +328,7 @@ static void dissect_imf_content_type(tvbuff_t *tvb, int offset, int length,
     len = end_offset - (first_colon + 1) - 2; /* Do not include the last CRLF */
 
     // allocate memory for parameters
-    *parameters = (guint8 *)malloc(len + 1);
+    *parameters = (guint8 *)g_malloc(len + 1);
     // copy string from tvb with length len to parameters
     // memcpy((void *)*parameters, tvb + first_colon + 1, len);
     // using g_memdup instead of memcpy
@@ -514,7 +519,7 @@ char *ws_find_media_type_parameter(const char *parameters, const char *key) {
   /* We found the parameter with that name; now extract the value. */
   // valuestr = (char *)wmem_alloc(scope, valuelen + 1);
   // allocate valuestr using stdlib
-  valuestr = (char *)malloc(valuelen + 1);
+  valuestr = (char *)g_malloc(valuelen + 1);
   vp = valuestr;
   p = value;
   /* Is the value a quoted string? */
@@ -594,7 +599,7 @@ static multipart_info_t *get_multipart_info(guint8 *content_type_str,
   /*
    * There is a value for the boundary string
    */
-  m_info = (multipart_info_t *)malloc(sizeof(multipart_info_t));
+  m_info = (multipart_info_t *)g_malloc(sizeof(multipart_info_t));
   m_info->type = type;
   m_info->boundary = start_boundary;
   m_info->boundary_length = (guint)strlen(start_boundary);
@@ -768,7 +773,7 @@ static char *unfold_and_compact_mime_header(const char *lines,
     return NULL;
 
   c = *p;
-  ret = (char *)malloc(strlen(lines) + 1);
+  ret = (char *)g_malloc(strlen(lines) + 1);
   q = ret;
 
   while (c) {
@@ -1430,7 +1435,7 @@ void dissect_imf(tvbuff_t *tvb) {
       next_tvb->real_data = tvb->real_data + end_offset;
       next_tvb->length = tvb->length - end_offset;
     } else {
-      next_tvb = (tvbuff_t *)malloc(sizeof(tvbuff_t));
+      next_tvb = (tvbuff_t *)g_malloc(sizeof(tvbuff_t));
       next_tvb->real_data = tvb->real_data + end_offset;
       next_tvb->length = tvb->length - end_offset;
     }

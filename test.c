@@ -11,12 +11,15 @@ void flow_browser(flow_base_t *flow) {
                                              .auth_state = SMTP_AUTH_STATE_NONE,
                                              .msg_last = true};
 
-  Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
-  smtp_info->num_fragments = 0;
-  smtp_info->fragments = NULL;
-  smtp_info->defragment_size = 0;
+  // Parsed_smtp *smtp_info = g_malloc(sizeof(Parsed_smtp));
+  Parsed_smtp smtp_info;
+  smtp_info.num_fragments = 0;
+  smtp_info.fragments = NULL;
+  smtp_info.defragment_size = 0;
 
   Node const *temp = flow->head_flow;
+
+  // print all payloads in flow->head_flow
 
   while (temp != NULL) {
 
@@ -25,54 +28,56 @@ void flow_browser(flow_base_t *flow) {
                    .length = ((parsed_payload *)temp->value)->data_len};
 
     dissect_smtp(&tvb, &session_state, ((parsed_payload *)temp->value)->is_up,
-                 ((parsed_payload *)temp->value)->index, smtp_info);
+                 ((parsed_payload *)temp->value)->index, &smtp_info);
 
     temp = temp->next;
   }
 
   u_char *defragment = NULL;
   // print fragments
-  if (smtp_info->num_fragments > 0) {
-    printf("Username: %.*s\n", smtp_info->username.length,
-           smtp_info->username.real_data);
-    printf("Password: %.*s\n", smtp_info->password.length,
-           smtp_info->password.real_data);
-    printf("Num Fragments: %d\n", smtp_info->num_fragments);
-    printf("Content length: %ld\n", smtp_info->defragment_size);
+  if (smtp_info.num_fragments > 0) {
+    printf("Username: %.*s\n", smtp_info.username.length,
+           smtp_info.username.real_data);
+    printf("Password: %.*s\n", smtp_info.password.length,
+           smtp_info.password.real_data);
+    printf("Num Fragments: %d\n", smtp_info.num_fragments);
+    printf("Content length: %ld\n", smtp_info.defragment_size);
 
     // printf("Fragments:\n");
     // print all fragments in smtp_info->fragments, note that this is GSList
     // int i = 0;
-    // for (GSList *temp = smtp_info->fragments; temp != NULL; temp = temp->next) {
+    // for (GSList *temp = smtp_info->fragments; temp != NULL; temp =
+    // temp->next) {
     //   i++;
     //   printf("%s\n", ((gchar *)temp->data));
     //   printf("Fragment %d length: %ld\n", i, strlen((gchar *)temp->data));
     // }
 
-      // merge all fragments in smtp_info->fragments to one string
-      defragment = g_malloc(smtp_info->defragment_size + 1);
-      size_t offset = 0;
-      for (GSList *temp = smtp_info->fragments; temp != NULL; temp =
-      temp->next) {
-        // memcpy(defragment + offset, temp->data, strlen(temp->data));
-        // using strcpy instead of memcpy to avoid copying \0 characters
-        strcpy((char *)defragment + offset, (char *)temp->data);
-        offset += strlen(temp->data);
-      }
-      defragment[smtp_info->defragment_size] = '\0';
+    // merge all fragments in smtp_info->fragments to one string
+    // defragment = g_malloc(smtp_info.defragment_size + 1);
+    // size_t offset = 0;
+    // for (GSList *temp = smtp_info.fragments; temp != NULL; temp = temp->next)
+    // {
+    //   // memcpy(defragment + offset, temp->data, strlen(temp->data));
+    //   // using strcpy instead of memcpy to avoid copying \0 characters
+    //   // strcpy((char *)defragment + offset, (char *)temp->data);
+    //   strncpy((char *)defragment + offset, (char *)temp->data,
+    //           strlen(temp->data) + 1);
+    //
+    //   offset += strlen(temp->data);
+    // }
+    // defragment[smtp_info.defragment_size] = '\0';
 
-      // print defragment
-      // printf("%s\n", defragment);
+    // print defragment
+    // printf("%s\n", defragment);
+    // g_free(defragment);
   }
 
-  tvbuff_t tvb = (tvbuff_t){.real_data = defragment,
-                            .length = smtp_info->defragment_size};
+  tvbuff_t tvb =
+      (tvbuff_t){.real_data = defragment, .length = smtp_info.defragment_size};
 
-  dissect_imf(&tvb);
-  // free defragment 
-  g_free(defragment);
-  // free smtp_info 
-  g_free(smtp_info);
+  // dissect_imf(&tvb);
+  // free defragment
 }
 
 void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
@@ -188,8 +193,8 @@ void get_packets(pcap_t *handler, FILE *fout_parser, FILE *fout_seq_filter,
   // Test a random flow
   printf("\nTest 01: Get a random flow\n");
 
-  // flow_base_t *flow_test = search_flow(table, 5676399932842470375, stdout);
-  flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
+  flow_base_t *flow_test = search_flow(table, 5676399932842470375, stdout);
+  // flow_base_t *flow_test = search_flow(table, 6813568831684183325, stdout);
 
   if (flow_test) {
     flow_browser(flow_test);

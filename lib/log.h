@@ -20,8 +20,8 @@
 
 #pragma once
 
-// #define PCAP_FILE "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/smtp.pcap"
-#define PCAP_FILE "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/sendFile.pcapng"
+#define PCAP_FILE "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/smtp.pcap"
+// #define PCAP_FILE "/media/lucifer/DATA/IMPORTANTS/code/NCS-Pcap-Parser/data/sendFile.pcapng"
 
 /* These below are just for debug */
 #define DBG_ALL 1
@@ -39,8 +39,8 @@
 #define DBG_CONSOLE (DBG_ALL & 1)
 
 #define SEC2NANO 1000000000
-#define LIMIT_PACKET 2700000
-#define HASH_TABLE_SIZE 30030
+#define LIMIT_PACKET 270
+#define HASH_TABLE_SIZE 300
 
 // If a sequence is too far from the previous one, that packet is consider
 // ignored

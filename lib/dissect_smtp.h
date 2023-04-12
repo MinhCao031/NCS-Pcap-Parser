@@ -380,7 +380,7 @@ int dissect_smtp(tvbuff_t *tvb, struct smtp_session_state *session_state,
      * Create a frame data structure and attach it to the packet.
      */
     spd_frame_data =
-        (struct smtp_proto_data *)malloc(sizeof(struct smtp_proto_data));
+        (struct smtp_proto_data *)g_malloc(sizeof(struct smtp_proto_data));
 
     spd_frame_data->pdu_type = SMTP_PDU_CMD;
     spd_frame_data->more_frags = TRUE;
@@ -625,7 +625,6 @@ int dissect_smtp(tvbuff_t *tvb, struct smtp_session_state *session_state,
     loffset = next_offset;
   }
 
-  // g_free(decrypt);
 
   if (request) {
 
@@ -695,6 +694,8 @@ int dissect_smtp(tvbuff_t *tvb, struct smtp_session_state *session_state,
         loffset = next_offset;
       }
     }
+    g_free(decrypt);
+    g_free(spd_frame_data);
   } else {
     // Multiline information
     smtp_multiline_state_t multiline_state = SMTP_MULTILINE_NONE;
