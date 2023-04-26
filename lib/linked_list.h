@@ -2,9 +2,10 @@
 #define LINKED_LIST_H
 
 #include "parsers.h"
+#include <stdio.h>
 
 typedef struct Node {
-  uint64_t key; // Absolute sequence
+  guint64 key; // Absolute sequence
   void *value;
   struct Node *next;
 } Node;
@@ -20,7 +21,7 @@ void insert_last_node(Node **head, Node **tail, Node *const node, FILE* stream);
 // insert head of list
 void insert_first_node(Node **head, Node *const node);
 // Search for a node with the given key
-Node *search_node(Node const *head, uint64_t key);
+Node *search_node(Node const *head, guint64 key);
 // Delete a node with the given key
 void delete_node_with_prev(Node** prev, FILE* stream);
 // Free all nodes in the list
@@ -28,7 +29,7 @@ void free_list(Node *head);
 // free a node and it's data
 void free_node(Node *node);
 // Get number of nodes in the list
-uint32_t get_list_size(Node const *head);
+guint32 get_list_size(Node const *head);
 // pop the head node in the list
 void pop_first_node(Node **head);
 

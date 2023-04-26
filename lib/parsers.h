@@ -3,17 +3,25 @@
 
 #include "dissection.h"
 
-extern uint32_t captured_packets;
-extern uint32_t inserted_packets;
-extern uint32_t filtered_packets;
+extern guint32 captured_packets;
+extern guint32 inserted_packets;
+extern guint32 filtered_packets;
 
 typedef struct {
-  uint32_t index; // index of packet in wireshark file
-  uint16_t data_len;
-  uint8_t is_up;
-  uint8_t is_truncated;
+  guint32 index; // index frame of packet in wireshark file
+  guint16 data_len;
+  guint8 is_up;
+  guint8 is_truncated;
   u_char const *data;
 } parsed_payload;
+
+#define PP_PTR(payload) ((parsed_payload *)(payload))
+#define PP_IN_NODE(node) PP_PTR((node)->value)
+#define PP_FRAME(node) PP(node)->index;
+#define PP_DTLEN(node) PP(node)->data_len;
+#define PP_IS_UP(node) PP(node)->is_up;
+#define PP_TRUNC(node) PP(node)->trunc;
+#define PP_CDATA(node) PP(node)->data;
 
 typedef struct {
 
@@ -22,7 +30,7 @@ typedef struct {
   // struct in_addr dst_ip;
 
   // protocol
-  // uint16_t protocol;
+  // guint16 protocol;
 
   struct ip ip_header;
 

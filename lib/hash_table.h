@@ -2,9 +2,12 @@
 #define HASH_TABLE_H
 
 #include "flow_api.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
 typedef struct {
-  uint32_t size;
+  guint32 size;
   Node **lists;
 } HashTable;
 
@@ -13,13 +16,13 @@ typedef struct {
 enum InsertAlgorihm { FIRST = 0, LAST = 1, ASC = 2, DESC = 3 };
 
 // Hash function
-uint32_t hash(uint64_t x, uint64_t len);
+guint32 hash(guint64 x, guint64 len);
 
 // free a hashtable
 void free_hash_table(HashTable table);
 
 // create a hash table
-HashTable create_hash_table(uint64_t size);
+HashTable create_hash_table(guint64 size);
 
 // insert a new flow into the hash table
 void insert_new_flow(HashTable table, Node *const flow_node);
@@ -28,19 +31,19 @@ void insert_new_flow(HashTable table, Node *const flow_node);
 void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type, flow_base_t* flow_ptr, FILE* stream);
 
 // search for a flow with the given key
-flow_base_t *search_flow(HashTable const table, uint64_t key, FILE* stream);
+flow_base_t *search_flow(HashTable const table, guint64 key, FILE* stream);
 
 // delete a flow with the given key
-void delete_flow(HashTable table, uint64_t key);
+void delete_flow(HashTable table, guint64 key);
 
 // Get number of packets in hash table
-uint32_t count_packets(HashTable const table);
+guint32 count_packets(HashTable const table);
 
 // get number of flows in hash table
-uint32_t count_flows(HashTable const table);
+guint32 count_flows(HashTable const table);
 
 // get number of nodes in a flow
-uint32_t get_flow_size(flow_base_t const *flow);
+guint32 get_flow_size(flow_base_t const *flow);
 
 // free a payload node and it's data in a flow
 void free_payload_node(Node *payload_node);

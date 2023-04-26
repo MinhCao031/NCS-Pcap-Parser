@@ -3,14 +3,25 @@
 
 #include "log.h"
 
+#include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+#include <pcap.h>
+
+#include <netinet/in.h>
+#include <netinet/ether.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
 #define ETHERNET_HEADER_SIZE 14
 #define IPv4 0x0008
 #define NONE 0x0000
 
 typedef struct {
   u_char const *header_pointer;
-  uint32_t package_size;
-  uint16_t type;
+  guint32 package_size;
+  guint16 type;
   bool is_valid;
 } package;
 

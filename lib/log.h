@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -20,52 +21,29 @@
 
 #pragma once
 
-#define PCAP_FILE "smtp.pcap"
-
 /* These below are just for debug */
-#define DBG_ALL 1
-// 1 to calculate time, otherwise 0
-#define DBG_TIMER (DBG_ALL & 0)
-// 1 to print parser's process, otherwise 0
-#define DBG_PARSER (DBG_ALL & 1)
-// 1 to check and filter wrong sequences out, otherwise 0
-#define DBG_PKT_SEQ (DBG_ALL & 0)
-// 1 to print flow's info, otherwise 0
-#define DBG_FLOW (DBG_ALL & 1)
-// 1 to print data in the hex form, otherwise 0
-#define DBG_PAYLOAD (DBG_ALL & DBG_FLOW & 0)
-// 1 to print to console, otherwise 0
-#define DBG_CONSOLE (DBG_ALL & 1)
+extern const guint8 *DBG_TIMER;
+extern const guint8 *DBG_PARSER;
+extern const guint8 *DBG_FLOW;
+extern const guint8 *DBG_PAYLOAD;
+extern const guint8 *DBG_CONSOLE;
+extern const guint8 *DBG_DISSECT;
+
+extern FILE *LOG_PARSE;
+extern FILE *LOG_FLOWS;
+extern FILE *LOG_DISEC;
 
 #define SEC2NANO 1000000000
 #define LIMIT_PACKET 2700000
-#define HASH_TABLE_SIZE 30030
+#define POW2(p) (size_t)(1ULL << p)
 
 // If a sequence is too far from the previous one, that packet is consider ignored
-#define MAX_BYTE_DISTANCE (uint64_t)536870912
+#define MAX_BYTE_DISTANCE pow2(29)
 
 // Some txt file to print when debugging
-#define FILELOG_1 "output_parse_packet.txt"
-#define FILELOG_2 "output_seq_filter.txt"
-#define FILELOG_3 "output_wireshark.txt"
-
-#if DBG_PARSER == 1
-#define OUTPUT_1 fopen(FILELOG_1, "a+")
-#else
-#define OUTPUT_1 NULL
-#endif
-
-#if DBG_PKT_SEQ == 1
-#define OUTPUT_2 fopen(FILELOG_2, "a+")
-#else
-#define OUTPUT_2 NULL
-#endif
-
-#if DBG_FLOW == 1
-#define OUTPUT_3 fopen(FILELOG_3, "a+")
-#else
-#define OUTPUT_3 NULL
-#endif
+#define FILE_PARSE "output_parse_packet.txt"
+#define FILE_FLOWS "output_wireshark.txt"
+#define FILE_DISEC "output_dissect_pkt.txt"
 
 #define HAS_FIN_FLAG (pkt.tcp.th_flags & TH_FIN)
 #define HAS_SYN_FLAG (pkt.tcp.th_flags & TH_SYN)
@@ -81,170 +59,206 @@
 
 // Format for printing debug info
 #define LOG_DBG(stream, print, format, others...) \
-    if (stream && print)                          \
-    {                                             \
-        fprintf(stream, format, ##others);        \
-        fflush(stream);                           \
-    }
+  if (stream && print)                            \
+  {                                               \
+    fprintf(stream, format, ##others);            \
+    fflush(stream);                               \
+  } else {}
 
 #define LOG_SCR(format, others...) \
-    if (DBG_CONSOLE)               \
-        printf(format, ##others);
+  if (*DBG_CONSOLE)                \
+    printf(format, ##others);      \
+  else {}
+
+// Argument parser
+#define ARG_PARSING                                                       \
+  do                                                                      \
+  {                                                                       \
+    if (argc < 2)                                                         \
+    {                                                                     \
+      printf("Error: Name of pcap must be included as last argument.\n"); \
+      exit(11);                                                           \
+    }                                                                     \
+    FILE_PCAP = argv[argc - 1];                                           \
+    printf("File: \'%s\'\n\n", FILE_PCAP);                                \
+    int arg_parser = parse_arg(argc, argv);                               \
+    printf("Parser result = %d\n", arg_parser);                           \
+    if (arg_parser < 1)                                                   \
+    {                                                                     \
+      printf("No debug mode?\n");                                         \
+    }                                                                     \
+    FILE *fp = fopen(FILE_PCAP, "rb");                                    \
+    if (fp == NULL)                                                       \
+    {                                                                     \
+      printf("Error opening file\n");                                     \
+      exit(13);                                                           \
+    }                                                                     \
+    fseek(fp, 0L, SEEK_END);                                              \
+    pcap_file_size = ftell(fp);                                           \
+    printf("Size of file: %ld bytes\n\n", pcap_file_size);                \
+    fclose(fp);                                                           \
+  } while (0)
 
 // Get full timestamp
-#define GET_FULL_TIMESTAMP                                  \
-    char full_timestamp[80];                                \
-    struct tm ts = *localtime(&((header_pcap->ts).tv_sec)); \
-    strftime(full_timestamp, sizeof(full_timestamp), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
+#define GET_FULL_TIMESTAMP                                \
+  char full_timestamp[80];                                \
+  struct tm ts = *localtime(&((header_pcap->ts).tv_sec)); \
+  strftime(full_timestamp, sizeof(full_timestamp), "%a %Y-%m-%d %H:%M:%S %Z", &ts);
 
-#define PROCESS_PACKET_TIME(time_limit_warning)                        \
-    if (DBG_TIMER)                                                     \
-    {                                                                  \
-        process_time = (pkt_end.tv_sec - pkt_start.tv_sec) * SEC2NANO; \
-        process_time += pkt_end.tv_nsec - pkt_start.tv_nsec;           \
-        process_time_total += process_time;                            \
-        if (process_time < 1001)                                       \
-            sttstc[process_time / 100 - 3] += 1;                       \
-        else if (process_time < 10001)                                 \
-            sttstc[6 + (process_time + 999) / 1000] += 1;              \
-        else if (process_time < 100001)                                \
-            sttstc[15 + (process_time + 9999) / 10000] += 1;           \
-        else                                                           \
-            sttstc[26] += 1;                                           \
-        LOG_DBG(fout_parser, (process_time > time_limit_warning),      \
-                "Packet%8u:%7lu nanosec stoped at step %d of 6\n",     \
-                captured_packets, process_time, progress_pkt);         \
-    }
+#define PROCESS_PACKET_TIME(time_limit_warning)                    \
+  if (*DBG_TIMER)                                                  \
+  {                                                                \
+    process_time = (pkt_end.tv_sec - pkt_start.tv_sec) * SEC2NANO; \
+    process_time += pkt_end.tv_nsec - pkt_start.tv_nsec;           \
+    process_time_total += process_time;                            \
+    if (process_time < 1001)                                       \
+      sttstc[process_time / 100 - 3] += 1;                         \
+    else if (process_time < 10001)                                 \
+      sttstc[6 + (process_time + 999) / 1000] += 1;                \
+    else if (process_time < 100001)                                \
+      sttstc[15 + (process_time + 9999) / 10000] += 1;             \
+    else                                                           \
+      sttstc[26] += 1;                                             \
+    LOG_DBG(fout_parser, (process_time > time_limit_warning),      \
+            "Packet%8u:%7lu nsec (%d/6)\n",                        \
+            captured_packets, process_time, progress_pkt);         \
+  }
 
-#define STATISTIC_PACKET_TIME                                                                                \
-    if (DBG_TIMER)                                                                                           \
-    {                                                                                                        \
-        LOG_DBG(fout_parser, 1, "Packet time total: %lu\n", process_time_total);                             \
-        LOG_DBG(fout_parser, 1, "Average time process: %lf\n", 1.0 * process_time_total / captured_packets); \
-        for (uint8_t i = 0; i < 8; i++)                                                                      \
-            LOG_DBG(fout_parser, 1, " =%-6u nanosec: %5u time(s)\n", (i + 3) * 100, sttstc[i]);              \
-        for (uint8_t i = 8; i < 17; i++)                                                                     \
-            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 6) * 1000, sttstc[i]);             \
-        for (uint8_t i = 17; i < 26; i++)                                                                    \
-            LOG_DBG(fout_parser, 1, "<=%-6u nanosec: %5u time(s)\n", (i - 15) * 10000, sttstc[i]);           \
-        LOG_DBG(fout_parser, 1, "> 100000 nanosec: %5u time(s)\n", sttstc[26]);                              \
-    }
+#define STATISTIC_PACKET_TIME                                                                            \
+  if (*DBG_TIMER)                                                                                        \
+  {                                                                                                      \
+    LOG_DBG(fout_parser, 1, "Packet time total: %lu\n", process_time_total);                             \
+    LOG_DBG(fout_parser, 1, "Average time process: %lf\n", 1.0 * process_time_total / captured_packets); \
+    for (guint8 i = 0; i < 8; i++)                                                                       \
+      LOG_DBG(fout_parser, 1, " =%-6u nsec: %7u time(s)\n", (i + 3) * 100, sttstc[i]);                   \
+    for (guint8 i = 8; i < 17; i++)                                                                      \
+      LOG_DBG(fout_parser, 1, "<=%-6u nsec: %7u time(s)\n", (i - 6) * 1000, sttstc[i]);                  \
+    for (guint8 i = 17; i < 26; i++)                                                                     \
+      LOG_DBG(fout_parser, 1, "<=%-6u nsec: %7u time(s)\n", (i - 15) * 10000, sttstc[i]);                \
+    LOG_DBG(fout_parser, 1, "> 100000 nsec: %7u time(s)\n", sttstc[26]);                                 \
+  }
 
 // Try to insert to flow
-#define TRY_INSERT_FLOW                                                                        \
-    do                                                                                         \
-    {                                                                                          \
-        uint8_t direction = is_packet_up(flow, pkt);                                           \
-        uint32_t expect_seq = flow->next_seq[direction];                                       \
-        uint32_t currnt_seq = pkt.tcp.seq;                                                     \
-        uint32_t currnt_len = pkt.payload.data_len;                                            \
-        if (currnt_seq + currnt_len <= expect_seq)                                             \
-        {                                                                                      \
-            LOG_DBG(stream, DBG_PARSER, "TCP not inserted: SEQ(%u <= %u <= %u)"                \
-                    " -> Payload already in flow\n",                                           \
-                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
-        }                                                                                      \
-        else if (currnt_seq <= expect_seq)                                                     \
-        {                                                                                      \
-            LOG_DBG(stream, DBG_PARSER, "TCP inserted: New payload: SEQ(%u <= %u <= %u)\n",    \
-                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
-            Node *new_pkt_node = create_payload_node(pkt, direction, expect_seq - currnt_seq); \
-            flow->next_seq[direction] = currnt_seq + currnt_len;                               \
-            flow->total_payload += currnt_seq + currnt_len - expect_seq;                       \
-            insert_to_flow(new_pkt_node, ASC, flow, stream);                                  \
-            if (currnt_seq == expect_seq)                                                      \
-                flow->track_flow[direction] = new_pkt_node;                                 \
-            inserted_packets += 1;                                                             \
-        }                                                                                      \
-        else                                                                                   \
-        {                                                                                      \
-            LOG_DBG(stream, DBG_PARSER, "TCP may not be inserted: SEQ(%u <= %u <= %u)\n"       \
-                                        " -> The sequence is higher\n",                        \
-                    currnt_seq, expect_seq, currnt_seq + currnt_len);                          \
-            printf("TCP may not be inserted: The sequence is higher\n");                       \
-            Node *new_pkt_node = create_payload_node(pkt, direction, 0);                       \
-            insert_to_flow(new_pkt_node, LAST, flow, stream);                                  \
-        }                                                                                      \
-    } while (0)
+#define TRY_INSERT_FLOW                                                                   \
+  do                                                                                      \
+  {                                                                                       \
+    guint8 direction = is_packet_up(flow, pkt);                                           \
+    guint32 expect_seq = flow->next_seq[direction];                                       \
+    guint32 currnt_seq = pkt.tcp.seq;                                                     \
+    guint32 currnt_len = pkt.payload.data_len;                                            \
+    if (currnt_seq + currnt_len <= expect_seq)                                            \
+    {                                                                                     \
+      LOG_DBG(stream, *DBG_PARSER,                                                        \
+              "TCP not inserted: SEQ(%u <= %u <= %u) -> Payload already in flow\n",       \
+              currnt_seq, expect_seq, currnt_seq + currnt_len);                           \
+    }                                                                                     \
+    else if (currnt_seq <= expect_seq)                                                    \
+    {                                                                                     \
+      LOG_DBG(stream, *DBG_PARSER, "TCP inserted: New payload: SEQ(%u <= %u <= %u)\n",    \
+              currnt_seq, expect_seq, currnt_seq + currnt_len);                           \
+      Node *new_pkt_node = create_payload_node(pkt, direction, expect_seq - currnt_seq);  \
+      flow->next_seq[direction] = currnt_seq + currnt_len;                                \
+      flow->total_payload += currnt_seq + currnt_len - expect_seq;                        \
+      insert_to_flow(new_pkt_node, ASC, flow, stream);                                    \
+      /* handle_ftp_pkt(flow, new_pkt_node, stream); */                                   \
+      if (currnt_seq == expect_seq)                                                       \
+        flow->track_flow[direction] = new_pkt_node;                                       \
+      inserted_packets += 1;                                                              \
+    }                                                                                     \
+    else                                                                                  \
+    {                                                                                     \
+      LOG_DBG(stream, *DBG_PARSER,                                                        \
+              "TCP may not be inserted: SEQ(%u <= %u <= %u) -> The sequence is higher\n", \
+              currnt_seq, expect_seq, currnt_seq + currnt_len);                           \
+      LOG_SCR("TCP may not be inserted: The sequence is higher\n");                       \
+      Node *new_pkt_node = create_payload_node(pkt, direction, 0);                        \
+      insert_to_flow(new_pkt_node, LAST, flow, stream);                                   \
+    }                                                                                     \
+  } while (0)
 
-#define VERIFY_SEQ                                                             \
-    do                                                                         \
-    {                                                                          \
-        LOG_DBG(stream, DBG_PARSER, "Verify packets first...\n");              \
-        Node *track = flow->track_flow[is_packet_up(flow, pkt)];               \
-        if (!track)                                                            \
-            break;                                                             \
-        uint8_t current_direction = ((parsed_payload *)(track->value))->is_up; \
-        uint32_t current_seq = track->key;                                     \
-        uint32_t current_len = ((parsed_payload *)(track->value))->data_len;   \
-        uint8_t next_direction;                                                \
-        uint32_t nextpkt_seq;                                                  \
-        uint32_t nextpkt_len;                                                  \
-        while (track->next != NULL)                                            \
-        {                                                                      \
-            LOG_DBG(stream, DBG_PARSER, "Track pointer -> %lu\n", track->key); \
-            next_direction = ((parsed_payload *)(track->next->value))->is_up;  \
-            if (current_direction != next_direction)                           \
-            {                                                                  \
-                track = track->next;                                           \
-                continue;                                                      \
-            }                                                                  \
-            nextpkt_seq = track->next->key;                                    \
-            nextpkt_len = ((parsed_payload *)(track->next->value))->data_len;  \
-            if (current_seq + current_len == nextpkt_seq)                      \
-            {                                                                  \
-                current_seq = nextpkt_seq + nextpkt_len;                       \
-                current_len = nextpkt_len;                                     \
-                flow->total_payload += nextpkt_len;                            \
-                flow->track_flow[current_direction] = track->next;             \
-                track = track->next;                                           \
-            }                                                                  \
-            else                                                               \
-                break;                                                         \
-        }                                                                      \
-        flow->next_seq[current_direction] = current_seq + current_len;         \
-    } while (0)
+// MALLMONDAYSALED
+
+#define VERIFY_SEQ                                                 \
+  do                                                               \
+  {                                                                \
+    /* Checking and updating the right sequences of packets */     \
+    Node *track = flow->track_flow[is_packet_up(flow, pkt)];       \
+    if (!track) /* Empty direction */                              \
+      break;                                                       \
+    guint8 current_direction = PP_IN_NODE(track)->is_up;           \
+    guint32 current_seq = track->key;                              \
+    guint32 current_len = PP_IN_NODE(track)->data_len;             \
+    guint8 next_direction;                                         \
+    guint32 nextpkt_seq;                                           \
+    guint32 nextpkt_len;                                           \
+    while (track->next != NULL) /* Has something to do */          \
+    {                                                              \
+      next_direction = PP_IN_NODE(track->next)->is_up;             \
+      if (current_direction != next_direction)                     \
+      { /* We only care the direction of the packet */             \
+        track = track->next;                                       \
+        continue;                                                  \
+      }                                                            \
+      nextpkt_seq = track->next->key;                              \
+      nextpkt_len = PP_IN_NODE(track->next)->data_len;             \
+      if (current_seq + current_len == nextpkt_seq)                \
+      { /* The previously wrong sequence has become true */        \
+        current_seq = nextpkt_seq + nextpkt_len;                   \
+        current_len = nextpkt_len;                                 \
+        flow->total_payload += nextpkt_len;                        \
+        flow->track_flow[current_direction] = track->next;         \
+        track = track->next;                                       \
+        continue;                                                  \
+      }                                                            \
+      break; /* Meet the last packet or the one with wrong seq */  \
+    }        /* The right sequence has been updated */             \
+    flow->next_seq[current_direction] = current_seq + current_len; \
+  } while (0)
+
+#define FTP_PKT_HANDLE                                                                    \
+  do                                                                                      \
+  {                                                                                       \
+    if (!flow->properties)                                                                \
+    {                                                                                     \
+    }                                                                                     \
+    u_char const *c = PP_IN_NODE(new_pkt_node)->data;                                     \
+    if (direction)                                                                        \
+    { /* Recognize command from the request side */                                       \
+      printf("Command: <<<%s>>>\n", c);                                                   \
+      char *cmd = calloc(5, sizeof(char));                                                \
+      for (int i = 0; isupper(*(c + i)) && i < 5; i++)                                    \
+        cmd[i] = *(c + i);                                                                \
+      if (*(cmd) == '\0')                                                                 \
+        break;                                                                            \
+      printf("Request command type: %s\n", cmd);                                          \
+      if (strcmp(cmd, "PORT") == 0 || strcmp(cmd, "PASV") == 0)                           \
+      {                                                                                   \
+        guint8 temp_ip[4], temp_port[2];                                                  \
+        gchar const *temp_num = (gchar *)c + 5;                                           \
+        sscanf(temp_num, "%hhu,%hhu,%hhu,%hhu,%hhu,%hhu",                                 \
+               &temp_ip[0], &temp_ip[1], &temp_ip[2], &temp_ip[3],                        \
+               &temp_port[0], &temp_port[1]);                                             \
+        guint32 new_ip_addr = temp_ip[0];                                                 \
+        new_ip_addr += POW2(8) * temp_ip[1];                                              \
+        new_ip_addr += POW2(16) * temp_ip[2];                                             \
+        new_ip_addr += POW2(24) * temp_ip[3];                                             \
+        guint32 new_port = POW2(8) * temp_port[0] + temp_port[1];                         \
+        printf("New IP Address: %hhu.%hhu.%hhu.%hhu:%hu\n",                               \
+               temp_ip[0], temp_ip[1], temp_ip[2], temp_ip[3], new_port);                 \
+        printf("Converted IP: %u\n", new_ip_addr);                                        \
+        /**(flow->related_pip) = new_port * (1ULL + G_MAXUINT32) + new_ip_addr;*/         \
+      }                                                                                   \
+      /* if (flow->ftp_cmd[0]) */                                                         \
+      /* printf("Request command type: %s\n", flow->ftp_cmd); */                          \
+    }                                                                                     \
+    else if (isdigit(*c) && isdigit(*(c + 1)) && isdigit(*(c + 2)) && !isdigit(*(c + 3))) \
+    { /* Recognize command from the response side */                                      \
+      guint16 return_code = 999;                                                          \
+      sscanf((const char *)c, "%hu", &return_code);                                       \
+      printf("Response status: %hu\n", return_code);                                      \
+      /* sscanf((const char *)c, "%hu", &flow->ftp_return_code); */                       \
+      /* printf("Response status: %u\n", flow->ftp_return_code); */                       \
+    }                                                                                     \
+  } while (0)
 
 #endif /*LOG_H*/
-
-/*
-Tracking #1   SEQ = 3738363856 => 3738363890, ACK =          0
-Tracking #2   SEQ = 3738363856 => 3738363956, ACK =          0
-Tracking #6   SEQ = 2934727088 => 2934727269, ACK = 2126795697
-Tracking #7   SEQ = 2126795697 => 2126795706, ACK = 2934727269
-Tracking #9   SEQ = 2934727269 => 2934727406, ACK = 2126795706
-Tracking #10  SEQ = 2126795706 => 2126795718, ACK = 2934727406
-Tracking #11  SEQ = 2934727406 => 2934727424, ACK = 2126795718
-Tracking #12  SEQ = 2126795718 => 2126795748, ACK = 2934727424
-Tracking #13  SEQ = 2934727424 => 2934727442, ACK = 2126795748
-Tracking #14  SEQ = 2126795748 => 2126795766, ACK = 2934727442
-Tracking #15  SEQ = 2934727442 => 2934727472, ACK = 2126795766
-Tracking #16  SEQ = 2126795766 => 2126795802, ACK = 2934727472
-Tracking #17  SEQ = 2934727472 => 2934727480, ACK = 2126795802
-Tracking #18  SEQ = 2126795802 => 2126795841, ACK = 2934727480
-Tracking #19  SEQ = 2934727480 => 2934727494, ACK = 2126795841
-Tracking #20  SEQ = 2126795841 => 2126795847, ACK = 2934727494
-Tracking #21  SEQ = 2934727494 => 2934727550, ACK = 2126795847
-Tracking #22  SEQ = 2126795847 => 2126797307, ACK = 2934727550 *!*
-Tracking #23  SEQ = 2126797307 => 2126798767, ACK = 2934727550 *!*
-Tracking #24  SEQ = 2126798767 => 2126800227, ACK = 2934727550 *!*
-Tracking #25  SEQ = 2126800227 => 2126801687, ACK = 2934727550 *!*
-Tracking #27  SEQ = 2126795847 => 2126797299, ACK = 2934727550
-Tracking #32  SEQ = 2126797299 => 2126798751, ACK = 2934727550
-Tracking #33  SEQ = 2126798751 => 2126800203, ACK = 2934727550
-Tracking #35  SEQ = 2126800203 => 2126801655, ACK = 2934727550
-Tracking #36  SEQ = 2126801655 => 2126803107, ACK = 2934727550
-Tracking #38  SEQ = 2126803107 => 2126804559, ACK = 2934727550
-Tracking #39  SEQ = 2126804559 => 2126806011, ACK = 2934727550
-Tracking #41  SEQ = 2126806011 => 2126807463, ACK = 2934727550
-Tracking #42  SEQ = 2126807463 => 2126808915, ACK = 2934727550
-Tracking #44  SEQ = 2126808915 => 2126810367, ACK = 2934727550
-Tracking #45  SEQ = 2126810367 => 2126810396, ACK = 2934727550
-Tracking #52  SEQ = 2934727550 => 2934727578, ACK = 2126810396
-Tracking #54  SEQ = 2126810396 => 2126810402, ACK = 2934727578
-Tracking #56  SEQ = 2934727578 => 2934727626, ACK = 2126810402
-Tracking #60  SEQ = 3738363856 => 3738364057, ACK =          0
-
-
-
-*/

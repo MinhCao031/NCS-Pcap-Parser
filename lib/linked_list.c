@@ -1,7 +1,13 @@
 #include "linked_list.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
+#include <pcap.h>
+
 // Search for a node with the given key
-Node *search_node(Node const *head, uint64_t key) {
+Node *search_node(Node const *head, guint64 key) {
   Node const *current = head;
   while (current != NULL) {
     if (current->key == key) {
@@ -17,7 +23,6 @@ void delete_node_with_prev(Node **prev, FILE* stream) {
   Node *tmp = (*prev)->next;
   (*prev)->next = tmp->next;
   free_node(tmp);
-  LOG_DBG(stream, DBG_PARSER, "Delete success\n");
 }
 
 // Free all nodes in the list
@@ -37,40 +42,38 @@ void free_node(Node *node) {
 }
 
 // Get number of nodes in the list
-uint32_t get_list_size(Node const *head) {
-  uint32_t size = 0;
-  // uint32_t dbg_c = 0;
+guint32 get_list_size(Node const *head) {
+  guint32 size = 0;
   Node const *n = head;
 
   while (n != NULL) {
     size++;
     n = n->next;
   }
-  // printf("\n**%u##\n", dbg_c);
   return size;
 }
 
 // insert node by order desc (key) in the list
 void insert_node_desc(Node **head, Node *const node, FILE* stream) {
-  LOG_DBG(stream, DBG_PARSER, "Try inserting...\n");/**/
+  LOG_DBG(stream, *DBG_PARSER, "Try inserting...\n");/**/
   Node *n = *head;
 
   if (n == NULL) {
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "Head is null, attaching to node...\n");/**/
+    LOG_DBG(stream, *DBG_PARSER, "Head is null, attaching to node...\n");/**/
     return;
   }
   if ((int)(n->key - node->key) < 0) {
     node->next = n;
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "Inserting at the first place...\n");/**/
+    LOG_DBG(stream, *DBG_PARSER, "Inserting at the first place...\n");/**/
     return;
   }
   while (n->next != NULL) {
     if ((int)(n->next->key - node->key) < 0) {
       node->next = n->next;
       n->next = node;
-      LOG_DBG(stream, DBG_PARSER, "Found place to insert.\n");/**/
+      LOG_DBG(stream, *DBG_PARSER, "Found place to insert.\n");/**/
       return;
     }
     n = n->next;
@@ -79,22 +82,22 @@ void insert_node_desc(Node **head, Node *const node, FILE* stream) {
 }
 
 void insert_payload_asc(Node **head, Node **tail, Node *const node, FILE* stream) {
-  uint8_t node_direction = ((parsed_payload*)(node->value))->is_up;
-  LOG_DBG(stream, DBG_PARSER, "~~~TRY INSERTING...\n");/**/
+  guint8 node_direction = PP_IN_NODE(node)->is_up;
+  LOG_DBG(stream, *DBG_PARSER, "~~~TRY INSERTING...\n");/**/
   Node *n = *head;
 
   if (n == NULL) {
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "~~~HEAD IS NULL\n");/**/
+    LOG_DBG(stream, *DBG_PARSER, "~~~HEAD IS NULL\n");/**/
     return;
   }
   while (n->next != NULL) {
-    uint8_t n_direction = ((parsed_payload*)(n->next->value))->is_up;
+    guint8 n_direction = PP_IN_NODE(n->next)->is_up;
     if ((int)(n->next->key - node->key) > 0 && n_direction == node_direction) {
       node->next = n->next;
       n->next = node;
       *head = node;
-      LOG_DBG(stream, DBG_PARSER, "~~~FOUND PLACE TO INSERT\n");/**/
+      LOG_DBG(stream, *DBG_PARSER, "~~~FOUND PLACE TO INSERT\n");/**/
       return;
     }
     n = n->next;
@@ -107,25 +110,24 @@ void insert_payload_asc(Node **head, Node **tail, Node *const node, FILE* stream
 
 // insert node by order asc (key) in the list
 void insert_node_asc(Node **head, Node *const node, FILE* stream) {
-  LOG_DBG(stream, DBG_PARSER, "Try inserting...\n");/**/
   Node *n = *head;
 
   if (n == NULL) {
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "Head is null, attaching to node...\n");/**/
+    LOG_DBG(stream, *DBG_PARSER, "Head is null, attaching to node...\n");/**/
     return;
   }
   if ((int)(n->key - node->key) > 0) {
     node->next = n;
     *head = node;
-    LOG_DBG(stream, DBG_PARSER, "Inserting at the first place...\n");/**/
+    LOG_DBG(stream, *DBG_PARSER, "Inserting at the first place...\n");/**/
     return;
   }
   while (n->next != NULL) {
     if ((int)(n->next->key - node->key) > 0) {
       node->next = n->next;
       n->next = node;
-      LOG_DBG(stream, DBG_PARSER, "Found place to insert.\n");/**/
+      LOG_DBG(stream, *DBG_PARSER, "Found place to insert.\n");/**/
       return;
     }
     n = n->next;
@@ -139,7 +141,6 @@ void insert_last_node(Node **head, Node **tail, Node *const node, FILE* stream) 
     insert_first_node(head, node);
     return;
   } else {
-    LOG_DBG(stream, DBG_PARSER, "Last node actually...\n");
     Node *n = *tail;
     n->next = node;
     *tail = n->next;

@@ -6,7 +6,7 @@ package frame_dissector(u_char const *packet,
 
   // Show a warning if the length captured is different
   if (header->len != header->caplen) {
-    LOG_DBG(fout, DBG_PARSER, "Warning! Capture size different than package size:\n"
+    LOG_DBG(fout, *DBG_PARSER, "Warning! Capture size different than package size:\n"
       "header->len = %d bytes\nheader->caplen = %d bytes", header->len, header->caplen
     );
   }
@@ -28,32 +28,13 @@ package link_dissector(package ethernet_packet, FILE* fout) {
         ethernet_packet.header_pointer + ETHERNET_HEADER_SIZE;
     int ip_packet_size = ethernet_packet.package_size - ETHERNET_HEADER_SIZE;
 
-    // for (uint8_t i = (uint8_t)*ip_pointer; *ip_pointer != 0; ip_pointer++) {
-    //   printf("%u, ", i);
-    // }
-    // for (int i = 0; i < 20; i++) {
-    //   printf("%u, ", (uint8_t)*ip_pointer);
-    //   ip_pointer++;
-    // }
-    // for (int i = 0; i < 20; i++) {
-    //   ip_pointer--;
-    // }
-    // u_char const*IP_src = malloc(4 * sizeof(u_char));
-    // strncpy(IP_src, ip_pointer + 12, 4);
-    // IP_src[4] = '\0';
-
-    // u_char const*IP_dst = malloc(4 * sizeof(u_char));
-    // strncpy(IP_dst, ip_pointer + 16, 4);
-    // IP_dst[4] = '\0';
-
-
     return (package){.header_pointer = ip_pointer,
                      .package_size = ip_packet_size,
                      .type = ((struct ip *)ip_pointer)->ip_p,
                      .is_valid = true};
   }
 
-  LOG_DBG(fout, DBG_PARSER, "Not an IPv4\n");;
+  LOG_DBG(fout, *DBG_PARSER, "Not an IPv4\n");;
   return (package){.is_valid = false};
 }
 
@@ -61,13 +42,14 @@ package link_dissector(package ethernet_packet, FILE* fout) {
 package network_dissector(package packet, FILE* fout) {
 
   struct ip const *ip = (struct ip *)packet.header_pointer;
-
   int ip_header_size = ip->ip_hl * 4;
+  
+  // Length dissected/reported from the packet
   int ip_total_len = (htons)(ip->ip_len);
 
   // check size of ip header
   if (ip_header_size < 20) {
-    LOG_DBG(fout, DBG_PARSER, "*** Invalid IP header length: %u bytes\n", ip_header_size);;
+    LOG_DBG(fout, *DBG_PARSER, "*** Invalid IP header length: %u bytes\n", ip_header_size);;
     goto END;
   }
 
@@ -78,15 +60,16 @@ package network_dissector(package packet, FILE* fout) {
     struct tcphdr const *tcp = (struct tcphdr *)(packet.header_pointer + ip_header_size);
 
     int segment_size = -1;
-    if (ip_total_len == 0 || ip_total_len > 1500) {
+
+    if (ip_total_len == 0 || ip_total_len > 1500) { // If the reported length is 0 or too big
+      // No padding -> getting the length of captured bytes directly
       // This will handle data length for high-data packet
       segment_size = packet.package_size - ip_header_size;
-    } else {
+    } else { // If the reported length is small positive
+      // May have padding -> getting the length from dissected bytes in packets instead
       // This will solve ethernet padding problems low-data packet
       segment_size = ip_total_len - ip_header_size;
     }
-    LOG_DBG(fout, DBG_PARSER, "### %u ### %u ### TCP ### %u ### %u ###\n", packet.package_size, ip_total_len, ip_header_size, segment_size);
-    // printf("header_pointer: %ld vs %u\n", strlen((char*)tcp), segment_size);
 
     return (package){.header_pointer = (u_char *)tcp,
                      .package_size = segment_size,
@@ -107,7 +90,7 @@ package network_dissector(package packet, FILE* fout) {
       // This will solve ethernet padding problems in some low-data packets
       segment_size = ip_total_len - ip_header_size;
     }
-    LOG_DBG(fout, DBG_PARSER, "### %u ### %u ### UDP ### %u ### %u ###\n", packet.package_size, ip_total_len, ip_header_size, segment_size);
+
     return (package){
         .header_pointer = (u_char *)udp,
         .package_size = segment_size,
@@ -129,7 +112,7 @@ package transport_demux(package segment, FILE* fout) {
     return udp_dissector(segment, fout);
   }
 
-  LOG_DBG(fout, DBG_PARSER, "Not TCP or UDP\n");;
+  LOG_DBG(fout, *DBG_PARSER, "Not TCP or UDP\n");;
   return (package){.is_valid = false};
 }
 
@@ -142,21 +125,18 @@ package tcp_dissector(package segment, FILE* fout) {
   // fprintf(fout, "Dst port: %d\n", ntohs(tcp->th_dport)); 
 
   int tcp_header_size = tcp->th_off * 4;
-  // Print sequence number and acknowledgement number and offset 
-  // LOG_SCR("seq: %u, ack: %u, offset: %u\n", ntohl(tcp->th_seq), ntohl(tcp->th_ack), tcp->th_off);
 
   // check size of tcp header
   if (tcp_header_size < 20) {
-    LOG_DBG(fout, DBG_PARSER, "***Invalid TCP header length: %u bytes\n", tcp_header_size);;
+    LOG_DBG(fout, *DBG_PARSER, "***Invalid TCP header length: %u bytes\n", tcp_header_size);;
     return (package){.is_valid = false};
   }
 
   // get payload size
   int payload_size = segment.package_size - tcp_header_size;
-  LOG_DBG(fout, DBG_PARSER, "Pkt_size vs Hdr size: %d,%d\n", segment.package_size, tcp_header_size); ;
 
   if(payload_size < 0) {
-    LOG_DBG(fout, DBG_PARSER, "***Invalid TCP payload length: %u bytes\n", payload_size);;
+    LOG_DBG(fout, *DBG_PARSER, "***Invalid TCP payload length: %u bytes\n", payload_size);;
     return (package){.is_valid = false};
   }
 
@@ -171,12 +151,6 @@ package tcp_dissector(package segment, FILE* fout) {
 // Dessection of UDP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
 package udp_dissector(package segment, FILE* fout) {
-
-  // const struct udphdr *udp = (struct udphdr *)segment.header_pointer;
-
-  // // print source and destination port
-  // fprintf(fout, "Src port: %d\n", ntohs(udp->uh_sport));
-  // fprintf(fout, "Dst port: %d\n", ntohs(udp->uh_dport));
 
   int udp_header_size = 8;
 
